@@ -1,0 +1,422 @@
+<Window x:Class="DBDiver.Views.MainWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:m="using:DBDiver.Models"
+        xmlns:views="using:DBDiver.Views"
+        xmlns:vm="using:DBDiver.ViewModels"
+        mc:Ignorable="d"
+        x:CompileBindings="False"
+        Title="DB Diver" Height="800" Width="1200">
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="DB Diver — Schema Explorer" FontSize="20" FontWeight="Bold" Margin="10" Foreground="{DynamicResource ToolbarTextBrush}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10,0">
+            <Button Content="Open Schema" Command="{Binding LoadSchemaCommand}" />
+            <Button Content="Save Schema" Command="{Binding SaveSchemaCommand}" IsEnabled="{Binding IsSchemaLoaded}" Margin="8,0,0,0" />
+            <Button x:Name="ResetQueryButton" Content="Reset Query" Margin="8,0,0,0" />
+            <Button x:Name="SettingsButton" Content="Settings" Margin="8,0,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="10" ColumnDefinitions="*,260,10">
+            <Grid Grid.Column="0" x:Name="ViewportRoot">
+                    <Border ClipToBounds="True" Background="{DynamicResource GraphBackgroundBrush}" x:Name="ClipBorder">
+                    <Grid x:Name="GraphHost" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <ItemsControl ItemsSource="{Binding GraphEdges}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <views:GraphCanvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Path Classes="graph-edge" Classes.custom="{Binding IsCustom}" Classes.dim="{Binding IsDimmed}" Classes.hi="{Binding IsHighlighted}"
+                                          Classes.inner="{Binding IsInnerJoin}" Classes.left="{Binding IsLeftJoin}" Classes.right="{Binding IsRightJoin}" Classes.full="{Binding IsFullJoin}"
+                                          Classes.custom-query="{Binding IsCustomQueryEdge}"
+                                          Classes.hop1="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopOneConverter}}" Classes.hop2="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopTwoConverter}}" Classes.hop3="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopThreeConverter}}"
+                                          StrokeThickness="1.5">
+                                        <Path.Data>
+                                            <LineGeometry StartPoint="{Binding StartPoint}" EndPoint="{Binding EndPoint}" />
+                                        </Path.Data>
+                                    </Path>
+                                    <Path Stroke="Transparent" StrokeThickness="24" Tag="{Binding}" IsHitTestVisible="{Binding IsQueryEdge}">
+                                        <Path.Data>
+                                            <LineGeometry StartPoint="{Binding StartPoint}" EndPoint="{Binding EndPoint}" />
+                                        </Path.Data>
+                                    </Path>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding GraphNodes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <views:GraphCanvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerTheme>
+                            <ControlTheme TargetType="ContentPresenter">
+                            </ControlTheme>
+                        </ItemsControl.ItemContainerTheme>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="graph-node" Classes.dim="{Binding IsDimmed}" Classes.hi="{Binding IsHighlighted}"
+                                        Classes.hub="{Binding IsHub}" Classes.selected="{Binding IsSelected}" Classes.hop1="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopOneConverter}}" Classes.hop2="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopTwoConverter}}" Classes.hop3="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopThreeConverter}}" Tag="{Binding}" Margin="{Binding Position}"
+                                        BorderThickness="1.5" CornerRadius="6" Padding="10,6" Background="{DynamicResource GraphNodeBackgroundBrush}"
+                                        Classes.custom-source="{Binding IsCustomJoinSource}"
+                                        PointerEntered="OnNodePointerEnter" PointerExited="OnNodePointerLeave">
+                                    <TextBlock Text="{Binding Table.Name}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource GraphNodeTextBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem x:Name="AddCustomJoinMenuItem" Tag="{Binding}" Header="Add Custom Join Path" Click="OnAddCustomJoinClick" />
+                                            <MenuItem x:Name="BuildQueryMenuItem" Tag="{Binding}" Header="Build Query" Click="OnBuildQueryClick" />
+                                            <MenuItem x:Name="FinishQueryMenuItem" Tag="{Binding}" Header="Finish Query" Click="OnFinishQueryClick" />
+                                            <MenuItem x:Name="FindTableFromHere" Tag="{Binding}" Header="Find A Table From Here" Click="FindTableFromStartingTableClick"></MenuItem>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </Grid>
+                </Border>
+
+                <Border Classes="loading-overlay"
+                        IsVisible="{Binding !IsSchemaLoaded}">
+                    <Image Source="avares://DBDiver/Assets/logo.png" Stretch="Fill" />
+                </Border>
+
+                <Border x:Name="QueryBuilderLegend"
+                        IsVisible="{Binding IsQueryBuilding}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom"
+                        Margin="10,0,0,10"
+                        Background="#CC0F172A"
+                        BorderBrush="#334155"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="10,8">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Rectangle Width="18" Height="3" Fill="{DynamicResource GraphEdgeHighlightStrokeBrush}" VerticalAlignment="Center" Opacity="0.65" />
+                            <TextBlock Text="Nearby" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" Opacity="0.85" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderLeftJoinColorBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="LEFT" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderInnerJoinColorBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="INNER" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderRightJoinColorBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="RIGHT" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderFullJoinColorBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="FULL" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="viewport-controls"
+                        IsVisible="{Binding IsSchemaLoaded}"
+                        IsEnabled="{Binding IsSchemaLoaded}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,10,10,0">
+                    <StackPanel>
+                        <Button Classes="viewport-button" Content="+" Command="{Binding ZoomInCommand}" />
+                        <Button Classes="viewport-button" Content="−" Command="{Binding ZoomOutCommand}" />
+                        <TextBlock Classes="hop-label" Text="{Binding MaxHopDepth, StringFormat='{}{0} hops'}" />
+                        <Button Classes="viewport-button" Content="Hops +" Command="{Binding IncreaseHopsCommand}" />
+                        <Button Classes="viewport-button" Content="Hops −" Command="{Binding DecreaseHopsCommand}" />
+                        <Button Classes="viewport-button" Content="Fit" Command="{Binding FitGraphCommand}" />
+                        <Button Classes="viewport-button" Content="Reset" Command="{Binding ResetViewCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="minimap"
+                        IsVisible="{Binding IsSchemaLoaded}"
+                        IsEnabled="{Binding IsSchemaLoaded}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,10,10">
+                    <views:MinimapCanvas x:Name="MinimapCanvas" Width="200" Height="150" />
+                </Border>
+            </Grid>
+
+            <Border Grid.Column="1" IsVisible="{Binding IsSchemaLoaded}" Background="{DynamicResource SidebarBackgroundBrush}" BorderBrush="{DynamicResource SidebarBorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <TextBlock Grid.Row="0" Text="Isolated Tables" FontWeight="SemiBold" Foreground="#E2E8F0" />
+                    <ScrollViewer Grid.Row="1" Margin="0,8,0,0">
+                        <ItemsControl ItemsSource="{Binding IsolatedTables}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource SidebarItemBackgroundBrush}" BorderBrush="{DynamicResource SidebarItemBorderBrush}" BorderThickness="1"
+                                            CornerRadius="5" Padding="8,6" Margin="0,0,0,6">
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource SidebarItemTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" Text="{Binding IsolatedTables.Count, StringFormat='{}{0} tables'}"
+                               FontSize="11" Foreground="{DynamicResource SidebarTextBrush}" Margin="0,8,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="3" Background="{DynamicResource StatusbarBackgroundBrush}" BorderBrush="{DynamicResource SidebarBorderBrush}" BorderThickness="0,1,0,0" Padding="10,5">
+            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource StatusbarTextBrush}" />
+        </Border>
+        
+        <Border IsVisible="{Binding IsJoinPathSearchOpen}"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Top"
+                 Margin="0,60,0,0"
+                 Background="#0F172A"
+                 BorderBrush="#334155"
+                 BorderThickness="1"
+                 CornerRadius="8"
+                 Padding="16"
+                 MinWidth="320"
+                 MaxHeight="400"
+                 Grid.Row="2"
+                 Grid.Column="0"
+                 x:Name="JoinPathSearchOverlay">
+            <StackPanel Spacing="10">
+                <TextBox Watermark="Search tables..."
+                         Text="{Binding JoinPathSearchText}" x:Name="JoinPathSearchTextBox" />
+
+                <ListBox ItemsSource="{Binding JoinPathSearchResults}"
+                         SelectedItem="{Binding SelectedJoinPathTarget}"
+                         MinHeight="120"
+                         MaxHeight="220">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Table.Name}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="SettingsOverlayHost" Grid.Row="0" Grid.RowSpan="4" IsVisible="False"
+                Background="#CC0F172A" Padding="60">
+            <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+                CornerRadius="10" Width="680" Height="580">
+                <ContentControl x:Name="SettingsOverlayPresenter" />
+            </Border>
+        </Border>
+    </Grid>
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="ToolbarButtonBackgroundBrush" Color="#1E293B" />
+        <SolidColorBrush x:Key="ToolbarButtonForegroundBrush" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="ToolbarButtonBorderBrush" Color="#334155" />
+        <SolidColorBrush x:Key="ToolbarButtonHoverBackgroundBrush" Color="#243449" />
+        <SolidColorBrush x:Key="ToolbarButtonHoverBorderBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphNodeBorderBrush" Color="#334155" />
+        <SolidColorBrush x:Key="GraphNodeHoverBackgroundBrush" Color="#243449" />
+        <SolidColorBrush x:Key="GraphNodeHoverBorderBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphNodeHighlightBackgroundBrush" Color="#1E3A5F" />
+        <SolidColorBrush x:Key="GraphNodeHighlightBorderBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphNodeHubBackgroundBrush" Color="#17253D" />
+        <SolidColorBrush x:Key="GraphNodeHubBorderBrush" Color="#7DD3FC" />
+        <SolidColorBrush x:Key="GraphNodeSelectedBackgroundBrush" Color="#1F2937" />
+        <SolidColorBrush x:Key="GraphNodeSelectedBorderBrush" Color="#38BDF8" />
+        <SolidColorBrush x:Key="GraphNodeCustomSourceBorderBrush" Color="#F59E0B" />
+        <SolidColorBrush x:Key="GraphEdgeHighlightStrokeBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphEdgeDimmedStrokeBrush" Color="#334155" />
+        <SolidColorBrush x:Key="GraphEdgeCustomStrokeBrush" Color="#F59E0B" />
+        <SolidColorBrush x:Key="MinimapBackgroundBrush" Color="#CC0B1220" />
+        <SolidColorBrush x:Key="MinimapBorderBrush" Color="#334155" />
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F172A" />
+        <SolidColorBrush x:Key="ToolbarTextBrush" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="GraphBackgroundBrush" Color="#0B1220" />
+        <SolidColorBrush x:Key="GraphEdgeStrokeBrush" Color="#475569" />
+        <SolidColorBrush x:Key="GraphNodeBackgroundBrush" Color="#1E293B" />
+        <SolidColorBrush x:Key="GraphNodeTextBrush" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#111827" />
+        <SolidColorBrush x:Key="SidebarBorderBrush" Color="#1F2937" />
+        <SolidColorBrush x:Key="SidebarItemBackgroundBrush" Color="#1E293B" />
+        <SolidColorBrush x:Key="SidebarItemBorderBrush" Color="#334155" />
+        <SolidColorBrush x:Key="SidebarItemTextBrush" Color="#CBD5E1" />
+        <SolidColorBrush x:Key="SidebarTextBrush" Color="#64748B" />
+        <SolidColorBrush x:Key="StatusbarBackgroundBrush" Color="#111827" />
+        <SolidColorBrush x:Key="StatusbarTextBrush" Color="#9CA3AF" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Border.viewport-controls">
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector="Border.loading-overlay">
+            <Setter Property="Background" Value="{DynamicResource GraphBackgroundBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style Selector="Border.viewport-controls > StackPanel > Button.viewport-button">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarButtonForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.viewport-controls > StackPanel > Button.viewport-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ToolbarButtonHoverBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonHoverBorderBrush}" />
+        </Style>
+        <Style Selector="Border.viewport-controls > StackPanel > Button.viewport-button:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="Border.minimap">
+            <Setter Property="Background" Value="{DynamicResource MinimapBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MinimapBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="TextBlock.hop-label">
+            <Setter Property="Foreground" Value="{DynamicResource SidebarTextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2" />
+        </Style>
+        <Style Selector="Border.minimap:disabled">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
+        <Style Selector="Border.graph-node">
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeBorderBrush}" />
+            <Setter Property="Transitions">
+                <Setter.Value>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                        <BrushTransition Property="Background" Duration="0:0:0.12" />
+                        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+                    </Transitions>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Border.graph-node:pointerover">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeHoverBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeHoverBorderBrush}" />
+        </Style>
+        <Style Selector="Border.graph-node.hi">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeHighlightBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeHighlightBorderBrush}" />
+        </Style>
+        <Style Selector="Border.graph-node.hub">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeHubBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeHubBorderBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Border.graph-node.hub:pointerover">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeHubBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeHubBorderBrush}" />
+        </Style>
+        <Style Selector="Border.graph-node.hub.hi">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeHighlightBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeHighlightBorderBrush}" />
+        </Style>
+        <Style Selector="Border.graph-node.hub.selected">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeSelectedBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeSelectedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="2.5" />
+        </Style>
+        <Style Selector="Border.graph-node.hub.dim">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="Border.graph-node.selected">
+            <Setter Property="Background" Value="{DynamicResource GraphNodeSelectedBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeSelectedBorderBrush}" />
+        </Style>
+        <Style Selector="Border.graph-node.dim">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Border.graph-node.hi.hop1">
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Border.graph-node.hi.hop2">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="Border.graph-node.hi.hop3">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="Border.graph-node.custom-source">
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphNodeCustomSourceBorderBrush}" />
+            <Setter Property="BorderThickness" Value="2.5" />
+        </Style>
+        <Style Selector="Path.graph-edge">
+            <Setter Property="Stroke" Value="{DynamicResource GraphEdgeStrokeBrush}" />
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <Style Selector="Path.graph-edge.hi">
+            <Setter Property="Stroke" Value="{DynamicResource GraphEdgeHighlightStrokeBrush}" />
+            <Setter Property="StrokeThickness" Value="2.5" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Path.graph-edge.hi.hop1">
+            <Setter Property="Opacity" Value="0.85" />
+            <Setter Property="StrokeThickness" Value="2" />
+        </Style>
+        <Style Selector="Path.graph-edge.hi.hop2">
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="StrokeThickness" Value="1.8" />
+        </Style>
+        <Style Selector="Path.graph-edge.hi.hop3">
+            <Setter Property="Opacity" Value="0.45" />
+            <Setter Property="StrokeThickness" Value="1.6" />
+        </Style>
+        <Style Selector="Path.graph-edge.dim">
+            <Setter Property="Stroke" Value="{DynamicResource GraphEdgeDimmedStrokeBrush}" />
+            <Setter Property="Opacity" Value="0.2" />
+        </Style>
+        <Style Selector="Path.graph-edge.custom">
+            <Setter Property="Stroke" Value="{DynamicResource GraphEdgeCustomStrokeBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.custom.hi">
+            <Setter Property="Stroke" Value="{DynamicResource GraphEdgeCustomStrokeBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.inner">
+            <Setter Property="Stroke" Value="{DynamicResource QueryBuilderInnerJoinColorBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.left">
+            <Setter Property="Stroke" Value="{DynamicResource QueryBuilderLeftJoinColorBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.right">
+            <Setter Property="Stroke" Value="{DynamicResource QueryBuilderRightJoinColorBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.full">
+            <Setter Property="Stroke" Value="{DynamicResource QueryBuilderFullJoinColorBrush}" />
+        </Style>
+        <Style Selector="Path.graph-edge.custom-query">
+            <Setter Property="StrokeDashArray" Value="6,4" />
+        </Style>
+    </Window.Styles>
+</Window>

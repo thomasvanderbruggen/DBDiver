@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DBDiver.Views.QueryResultDialog"
+        Title="Generated SQL"
+        Width="720" Height="480"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        Background="#0F172A">
+    <Grid RowDefinitions="*,Auto" Margin="16">
+        <TextBox Grid.Row="0"
+                 x:Name="SqlTextBox"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 FontFamily="Consolas, Monaco, monospace"
+                 Background="#0B1220"
+                 Foreground="#E2E8F0" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button x:Name="CopyButton" Content="Copy SQL" Width="100" Classes="accent" />
+            <Button x:Name="CloseButton" Content="Close" Width="88" />
+        </StackPanel>
+    </Grid>
+</Window>

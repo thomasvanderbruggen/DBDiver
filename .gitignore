@@ -1,0 +1,12 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+logs/
+
+#Ignore all Markdown Files
+*.md
+#Except for Readme 
+!README.md
+*.DotSettings.user

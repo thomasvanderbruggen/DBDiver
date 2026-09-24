@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DBDiver.Views.SplashWindow"
+        Title="Loading..."
+        Width="400" Height="300"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="#0F172A">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+            <Image Source="avares://DBDiver/Assets/logo.png" Width="328" Height="164"
+                   HorizontalAlignment="Center" />
+            <TextBlock Text="DB Diver" FontSize="20" FontWeight="SemiBold" Foreground="#E2E8F0"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+        <ProgressBar IsIndeterminate="True" VerticalAlignment="Bottom" Height="4"
+                     Margin="24,0,24,24" />
+    </Grid>
+</Window>
