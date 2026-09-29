@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DBDiver.Views.WelcomeGuideOverlay">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="Welcome to DB Diver" FontSize="24" FontWeight="Bold" Margin="5, 5, 5, 5"
+                       Foreground="{DynamicResource ToolbarTextBrush}" />
+            <TextBlock Text="Explore relationships, build queries, and inspect your database schema visually." Margin="5, 5, 5, 5"
+                       TextWrapping="Wrap" Foreground="{DynamicResource SidebarItemTextBrush}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,18,0,0" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="12">
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="1. Load a schema" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="Use Open Schema to load the CSV of your database's schema. The CSV contains the tables and relationships needed to build the graph. 'Copy Schema Query' will copy the needed SQL Query to your Clipboard"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="2. Explore the graph" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="Drag with the right mouse button to pan. Scroll will move the viewport up/down (left/right supported on trackpads). Ctrl + Scroll to zoom, use Fit to bring the full graph into view, and adjust Hops (H+ / H−) to include more or fewer relationship hops."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="3. Build a query" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="Right-click a starting table and choose Build Query. Select related tables or relationship paths, adjust join types, then Finish Query to see the generated SQL."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="4. Refine and save" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="Use Reset Query to start over, Settings to tune colors and graph layout, and Save Schema to keep the loaded schema for later."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Unsure of where a table is on the graph?" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="You can right-click a node and select 'Find a Table From Here' and search for a table to see the join path. You may also use this feature once building a query to easily add the join path to your query."
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="guide-card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Have a join that isn't outlined via Primary and Foreign Key Relationships in the schema?" FontWeight="SemiBold" Foreground="{DynamicResource SidebarItemTextBrush}" />
+                        <TextBlock Text="You can right-click a node and select 'Add Custom Join Path' and then select the joining table. You will be prompted to enter the column names on both sides of the join. You can save modified schemas via the 'Save Schema' button to use them on future sessions"
+                                   TextWrapping="Wrap" Foreground="{DynamicResource SidebarTextBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+            <Button x:Name="CloseButton" Content="Get Started" Classes="accent" Padding="16,7" />
+        </StackPanel>
+    </Grid>
+</UserControl>
