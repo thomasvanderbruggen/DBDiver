@@ -19,9 +19,9 @@ public partial class MainWindow : Window
     private const double WheelZoomFactor = 1.1;
     private const double HostPanBoundary = 500;
     private const double NodeBaseFontSize = 13;
-    private const double MaxScreenScale = 1.6;
+    private const double MaxScreenScale = 3.0;
     private const double EdgeHitboxWidth = 32;
-    private const double AbbreviatedLabelZoom = 0.45;
+    private const double AbbreviatedLabelZoom = 0.30;
     private const int AbbreviatedLabelLength = 14;
     private double _panX;
     private double _panY;
@@ -71,10 +71,35 @@ public partial class MainWindow : Window
         MinimapCanvas.PointerReleased += OnMinimapPointerReleased;
         ResetQueryButton.Click += OnResetQueryClick;
         SettingsButton.Click += OnSettingsClick;
+        HelpButton.Click += (_, _) => ShowWelcomeGuide();
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.QueryFinished += OnQueryFinished;
         GraphHost.AddHandler(PointerMovedEvent, OnDebugPointerEvent, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         GraphHost.AddHandler(PointerPressedEvent, OnDebugPointerEvent, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        Loaded += (_, _) => ShowWelcomeGuideOnFirstLoad();
+    }
+
+    private void ShowWelcomeGuideOnFirstLoad()
+    {
+        if (DataContext is MainViewModel viewModel && !viewModel.CurrentSettings.HasSeenWelcomeGuide)
+            ShowWelcomeGuide();
+    }
+
+    private void ShowWelcomeGuide()
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        WelcomeGuidePresenter.Content = new WelcomeGuideOverlay();
+        var guide = (WelcomeGuideOverlay)WelcomeGuidePresenter.Content;
+        guide.CloseRequested += () =>
+        {
+            WelcomeGuideHost.IsVisible = false;
+            WelcomeGuidePresenter.Content = null;
+            viewModel.CurrentSettings.HasSeenWelcomeGuide = true;
+            new SettingsService().Save(viewModel.CurrentSettings);
+        };
+        WelcomeGuideHost.IsVisible = true;
     }
 
     private void ApplyTransform()

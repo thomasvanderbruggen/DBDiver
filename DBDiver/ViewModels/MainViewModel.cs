@@ -1,10 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Reflection.Metadata.Ecma335;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using DBDiver.Views;
 using DBDiver.Models;
 using DBDiver.Services;
 using Serilog;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace DBDiver.ViewModels;
 
@@ -30,6 +34,7 @@ public class MainViewModel : ViewModelBase
     {
         _schemaService = schemaService;
         _appSettings = _settingsService.Load();
+        CopySchemaCommand = new RelayCommand(_ => CopySchemaCommandToClipboard());
         LoadSchemaCommand = new RelayCommand(_ => LoadSchemaFromFile());
         SaveSchemaCommand = new RelayCommand(_ => SaveSchemaToFile());
         ZoomInCommand = new RelayCommand(_ => ZoomIn());
@@ -312,7 +317,8 @@ public class MainViewModel : ViewModelBase
 
         return adjacency;
     }
-
+    
+    public ICommand CopySchemaCommand { get; }
     public ICommand LoadSchemaCommand { get; }
     public ICommand SaveSchemaCommand { get; }
     public ICommand ZoomInCommand { get; }
@@ -353,6 +359,34 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged();
             ((RelayCommand)SaveSchemaCommand).RaiseCanExecuteChanged();
         }
+    }
+
+    public async void CopySchemaCommandToClipboard()
+    {
+        Avalonia.Input.Platform.IClipboard? clipboard = null;
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            clipboard = desktop.MainWindow?.Clipboard;
+        }
+        await clipboard.SetTextAsync(@"SELECT
+        t.name AS [table],
+        STRING_AGG(pk_col.name, ';') WITHIN GROUP (ORDER BY pk_col.name) AS pk_columns,
+            fk_source.name AS fk_source_table,
+            fk_col.name AS fk_source_column,
+            fk_target.name AS fk_target_table,
+            fk_target_col.name AS fk_target_column
+            FROM sys.tables t
+        LEFT JOIN sys.indexes i ON i.object_id = t.object_id AND i.is_primary_key = 1
+        LEFT JOIN sys.index_columns ic ON ic.object_id = t.object_id AND ic.index_id = i.index_id
+        LEFT JOIN sys.columns pk_col ON pk_col.object_id = t.object_id AND pk_col.column_id = ic.column_id
+        LEFT JOIN sys.foreign_key_columns fkc ON fkc.parent_object_id = t.object_id
+        LEFT JOIN sys.tables fk_source ON fk_source.object_id = fkc.parent_object_id
+        LEFT JOIN sys.tables fk_target ON fk_target.object_id = fkc.referenced_object_id
+        LEFT JOIN sys.columns fk_col ON fk_col.object_id = fkc.parent_object_id AND fk_col.column_id = fkc.parent_column_id
+        LEFT JOIN sys.columns fk_target_col ON fk_target_col.object_id = fkc.referenced_object_id AND
+        fk_target_col.column_id = fkc.referenced_column_id
+        GROUP BY t.name, fk_source.name, fk_col.name, fk_target.name, fk_target_col.name
+            ORDER BY t.name;");
     }
 
     public void LoadSchemaFromFile()
