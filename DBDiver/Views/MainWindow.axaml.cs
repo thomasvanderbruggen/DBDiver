@@ -119,7 +119,7 @@ public partial class MainWindow : Window
         if (point.Properties.IsRightButtonPressed && FindNodeFromVisual(e.Source as Control) is not null)
             return;
 
-        if (point.Properties.IsRightButtonPressed)
+        if (point.Properties.IsLeftButtonPressed)
         {
             _isPanning = true;
             _isWaitingForPotentialDragClick = true;
