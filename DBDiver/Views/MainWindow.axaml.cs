@@ -17,7 +17,7 @@ public partial class MainWindow : Window
     private const double MinZoom = 0.2;
     private const double MaxZoom = 3.0;
     private const double WheelZoomFactor = 1.1;
-    private const double HostPanBoundary = 500;
+    private const double ViewportMargin = 100;
     private const double NodeBaseFontSize = 13;
     private const double MaxScreenScale = 3.0;
     private const double EdgeHitboxWidth = 32;
@@ -60,6 +60,7 @@ public partial class MainWindow : Window
         ClipBorder.PointerMoved += OnPointerMoved;
         ClipBorder.PointerReleased += OnPointerReleased;
         ClipBorder.PointerCaptureLost += OnPointerCaptureLost;
+        ClipBorder.ClipToBounds = true;
         ClipBorder.AddHandler(PointerPressedEvent, OnGraphPointerPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         ClipBorder.AddHandler(PointerReleasedEvent, OnGraphPointerReleased, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         ClipBorder.AddHandler(PointerReleasedEvent, OnPointerReleased, Avalonia.Interactivity.RoutingStrategies.Tunnel);
@@ -110,7 +111,7 @@ public partial class MainWindow : Window
         GraphHost.RenderTransform = group;
         GraphHost.RenderTransformOrigin = new RelativePoint(0, 0, RelativeUnit.Relative);
         MinimapCanvas.InvalidateVisual();
-        UpdateNodeScreenScaling();
+        if (!_isPanning) UpdateNodeScreenScaling();
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -194,7 +195,7 @@ public partial class MainWindow : Window
 
     private void OnGraphPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_isPanning || e.InitialPressMouseButton != MouseButton.Right || !_isWaitingForPotentialDragClick)
+        if (!_isPanning || e.InitialPressMouseButton != MouseButton.Left || !_isWaitingForPotentialDragClick)
             return;
 
         if (DataContext is MainViewModel vm && vm.SelectedNode is not null)
@@ -226,7 +227,7 @@ public partial class MainWindow : Window
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_isPanning && e.InitialPressMouseButton == MouseButton.Right)
+        if (_isPanning && e.InitialPressMouseButton == MouseButton.Left)
         {
             _isPanning = false;
             if (_isWaitingForPotentialDragClick)
@@ -417,7 +418,7 @@ public partial class MainWindow : Window
             var factor = e.Delta.Y > 0 ? WheelZoomFactor : 1 / WheelZoomFactor;
             var newZoom = Math.Clamp(_zoom * factor, MinZoom, MaxZoom);
             ZoomAt(newZoom, e.GetPosition(ClipBorder));
-            Serilog.Log.Information("Wheel: zoom -> {Zoom:F2} at {Pos}", _zoom, e.GetPosition(ClipBorder));
+            Serilog.Log.Debug("Wheel: zoom -> {Zoom:F2} at {Pos}", _zoom, e.GetPosition(ClipBorder));
         }
         else
         {
@@ -427,7 +428,7 @@ public partial class MainWindow : Window
             _panY -= panY * PanSpeed;
             ClampPan();
             ApplyTransform();
-            Serilog.Log.Information("Wheel: pan {DeltaX:F2},{DeltaY:F2} ({ScaledX:F0},{ScaledY:F0}) -> ({PanX:F0},{PanY:F0})", e.Delta.X, e.Delta.Y, panX, panY, _panX, _panY);
+            Serilog.Log.Debug("Wheel: pan {DeltaX:F2},{DeltaY:F2} ({ScaledX:F0},{ScaledY:F0}) -> ({PanX:F0},{PanY:F0})", e.Delta.X, e.Delta.Y, panX, panY, _panX, _panY);
         }
         e.Handled = true;
     }
@@ -439,7 +440,7 @@ public partial class MainWindow : Window
         _panY -= e.Delta.Y * ScrollSpeed;
         ClampPan();
         ApplyTransform();
-        Serilog.Log.Information("ScrollGesture: {DeltaX:F2},{DeltaY:F2} -> pan ({PanX:F0},{PanY:F0})", e.Delta.X, e.Delta.Y, _panX, _panY);
+        Serilog.Log.Debug("ScrollGesture: {DeltaX:F2},{DeltaY:F2} -> pan ({PanX:F0},{PanY:F0})", e.Delta.X, e.Delta.Y, _panX, _panY);
         e.Handled = true;
     }
 
@@ -453,7 +454,7 @@ public partial class MainWindow : Window
 
         var newZoom = Math.Clamp(_pinchStartZoom * e.Scale, MinZoom, MaxZoom);
         ZoomAt(newZoom, e.ScaleOrigin);
-        Serilog.Log.Information("Pinch: scale {Scale:F2} origin {Origin} -> zoom {Zoom:F2}", e.Scale, e.ScaleOrigin, _zoom);
+        Serilog.Log.Debug("Pinch: scale {Scale:F2} origin {Origin} -> zoom {Zoom:F2}", e.Scale, e.ScaleOrigin, _zoom);
         e.Handled = true;
     }
 
@@ -467,7 +468,7 @@ public partial class MainWindow : Window
         if (e.RoutedEvent == InputElement.PointerMovedEvent && _lastDebugLog.Ticks != 0 && DateTime.Now - _lastDebugLog < TimeSpan.FromMilliseconds(250))
             return;
         _lastDebugLog = DateTime.Now;
-        Serilog.Log.Information("Pointer: type={Type}, device={Device}, pressed={Pressed}, pos={Pos}",
+        Serilog.Log.Debug("Pointer: type={Type}, device={Device}, pressed={Pressed}, pos={Pos}",
             e.Pointer.Type, e.Pointer, e.Pointer.IsPrimary, e.GetPosition(ClipBorder));
     }
 
@@ -535,23 +536,27 @@ public partial class MainWindow : Window
         if (viewportWidth <= 0 || viewportHeight <= 0 || DataContext is not MainViewModel vm || vm.NodeIndex.Count == 0)
             return;
 
-        var minX = vm.NodeIndex.Values.Min(n => n.X);
-        var minY = vm.NodeIndex.Values.Min(n => n.Y);
-        var maxX = vm.NodeIndex.Values.Max(n => n.X + n.Width);
-        var maxY = vm.NodeIndex.Values.Max(n => n.Y + n.Height);
-        var graphWidth = Math.Max(maxX - minX, 1);
-        var graphHeight = Math.Max(maxY - minY, 1);
-        const double CanvasMargin = 100;
+        var bounds = ComputeGraphWorldBounds();
+        if (!TryComputeRenderedGraphWorldBounds(ref bounds) || bounds.Width <= 0 || bounds.Height <= 0)
+            return;
 
-        _zoom = Math.Clamp(Math.Min(viewportWidth / graphWidth, viewportHeight / graphHeight), MinZoom, 1.0);
+        var minX = bounds.X;
+        var minY = bounds.Y;
+        var graphWidth = Math.Max(bounds.Width, 1);
+        var graphHeight = Math.Max(bounds.Height, 1);
+        var availableWidth = Math.Max(viewportWidth - ViewportMargin * 2, 1);
+        var availableHeight = Math.Max(viewportHeight - ViewportMargin * 2, 1);
+
+        _zoom = Math.Clamp(Math.Min(availableWidth / graphWidth, availableHeight / graphHeight), MinZoom, 1.0);
         var scaledWidth = graphWidth * _zoom;
         var scaledHeight = graphHeight * _zoom;
-        GraphHost.Width = graphWidth + minX + CanvasMargin;
-        GraphHost.Height = graphHeight + minY + CanvasMargin;
+        GraphHost.Width = 20000;//graphWidth + minX;
+        GraphHost.Height = 20000; //graphHeight + minY;
 
         _pendingCenterOnGraph = false;
         _panX = (viewportWidth - scaledWidth) / 2 - minX * _zoom;
         _panY = (viewportHeight - scaledHeight) / 2 - minY * _zoom;
+        ApplyTransform();
         ClampPan();
         ApplyTransform();
 
@@ -581,23 +586,22 @@ public partial class MainWindow : Window
 
     private void ClampPan()
     {
-        var hostWidth = double.IsNaN(GraphHost.Width) ? GraphHost.Bounds.Width : GraphHost.Width;
-        var hostHeight = double.IsNaN(GraphHost.Height) ? GraphHost.Bounds.Height : GraphHost.Height;
-        var scaledWidth = hostWidth * _zoom;
-        var scaledHeight = hostHeight * _zoom;
-
         var viewportWidth = ClipBorder.Bounds.Width;
         var viewportHeight = ClipBorder.Bounds.Height;
-        var minPanX = viewportWidth - scaledWidth - HostPanBoundary;
-        var minPanY = viewportHeight - scaledHeight - HostPanBoundary;
-        var maxPanX = HostPanBoundary;
-        var maxPanY = HostPanBoundary;
+        var bounds = ComputeGraphWorldBounds();
+        if (!TryComputeRenderedGraphWorldBounds(ref bounds) || bounds.Width <= 0 || bounds.Height <= 0)
+            return;
+
+        var minPanX = viewportWidth - ViewportMargin - bounds.Right * _zoom;
+        var minPanY = viewportHeight - ViewportMargin - bounds.Bottom * _zoom;
+        var maxPanX = ViewportMargin - bounds.X * _zoom;
+        var maxPanY = ViewportMargin - bounds.Y * _zoom;
 
         _panX = minPanX > maxPanX
-            ? (viewportWidth - scaledWidth) / 2
+            ? (minPanX + maxPanX) / 2
             : Math.Clamp(_panX, minPanX, maxPanX);
         _panY = minPanY > maxPanY
-            ? (viewportHeight - scaledHeight) / 2
+            ? (minPanY + maxPanY) / 2
             : Math.Clamp(_panY, minPanY, maxPanY);
     }
 
@@ -606,15 +610,36 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel vm || vm.NodeIndex.Count == 0)
             return default;
 
-        var minX = vm.NodeIndex.Values.Min(n => n.X);
-        var minY = vm.NodeIndex.Values.Min(n => n.Y);
-        var maxX = vm.NodeIndex.Values.Max(n => n.X + n.Width);
-        var maxY = vm.NodeIndex.Values.Max(n => n.Y + n.Height);
+        var minX = vm.NodeIndex.Values.Min(node => node.X);
+        var minY = vm.NodeIndex.Values.Min(node => node.Y);
+        var maxX = vm.NodeIndex.Values.Max(node => node.X + node.Width);
+        var maxY = vm.NodeIndex.Values.Max(node => node.Y + node.Height);
 
         if (maxX <= minX || maxY <= minY)
             return default;
 
         return new Rect(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private bool TryComputeRenderedGraphWorldBounds(ref Rect bounds)
+    {
+        Rect? renderedBounds = null;
+        foreach (var node in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(GraphHost)
+                     .OfType<Border>()
+                     .Where(border => border.Classes.Contains("graph-node")))
+        {
+            if (node.TranslatePoint(new Point(0, 0), GraphHost) is not { } position)
+                continue;
+
+            var nodeBounds = new Rect(position, node.Bounds.Size);
+            renderedBounds = renderedBounds?.Union(nodeBounds) ?? nodeBounds;
+        }
+
+        if (renderedBounds is null)
+            return false;
+
+        bounds = renderedBounds.Value;
+        return true;
     }
 
     internal Rect GetMinimapViewportRect(Rect graphBounds, double scale, double offsetX, double offsetY)

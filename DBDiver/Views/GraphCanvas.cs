@@ -33,17 +33,14 @@ public class GraphCanvas : Panel
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        double maxX = 0, maxY = 0;
         foreach (var child in Children)
         {
             var x = child.GetValue(XProperty);
             var y = child.GetValue(YProperty);
             var desired = child.DesiredSize;
             child.Arrange(new Rect(x, y, desired.Width, desired.Height));
-            maxX = Math.Max(maxX, x + desired.Width);
-            maxY = Math.Max(maxY, y + desired.Height);
         }
 
-        return new Size(maxX, maxY);
+        return finalSize;
     }
 }

@@ -30,7 +30,7 @@
 
         <Grid Grid.Row="2" Margin="10" ColumnDefinitions="*,260,10">
             <Grid Grid.Column="0" x:Name="ViewportRoot">
-                    <Border ClipToBounds="True" Background="{DynamicResource GraphBackgroundBrush}" x:Name="ClipBorder">
+                    <Border Background="{DynamicResource GraphBackgroundBrush}" x:Name="ClipBorder" >
                     <Grid x:Name="GraphHost" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <ItemsControl ItemsSource="{Binding GraphEdges}">
                         <ItemsControl.ItemsPanel>
@@ -246,7 +246,7 @@
         <SolidColorBrush x:Key="GraphNodeHoverBackgroundBrush" Color="#243449" />
         <SolidColorBrush x:Key="GraphNodeHoverBorderBrush" Color="#60A5FA" />
         <SolidColorBrush x:Key="GraphNodeHighlightBackgroundBrush" Color="#1E3A5F" />
-        <SolidColorBrush x:Key="GraphNodeHighlightBorderBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphNodeHighlightBorderBrush" Color="#F59E0B" />
         <SolidColorBrush x:Key="GraphNodeHubBackgroundBrush" Color="#17253D" />
         <SolidColorBrush x:Key="GraphNodeHubBorderBrush" Color="#7DD3FC" />
         <SolidColorBrush x:Key="GraphNodeSelectedBackgroundBrush" Color="#1F2937" />
@@ -260,7 +260,7 @@
         <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F172A" />
         <SolidColorBrush x:Key="ToolbarTextBrush" Color="#E2E8F0" />
         <SolidColorBrush x:Key="GraphBackgroundBrush" Color="#0B1220" />
-        <SolidColorBrush x:Key="GraphEdgeStrokeBrush" Color="#475569" />
+        <SolidColorBrush x:Key="GraphEdgeStrokeBrush" Color="#7ba3e3" />
         <SolidColorBrush x:Key="GraphNodeBackgroundBrush" Color="#1E293B" />
         <SolidColorBrush x:Key="GraphNodeTextBrush" Color="#E2E8F0" />
         <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#111827" />
