@@ -18,7 +18,7 @@ public class GraphLayoutService
 
     public void ComputeLayout(DbSchema schema, Dictionary<string, GraphNode> nodes, GraphLayoutSettings settings)
     {
-        var tableNames = schema.Tables.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tableNames = schema.Tables.Select(t => t.QualifiedName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var edgePairs = schema.Relationships
             .Where(r => tableNames.Contains(r.SourceTable) && tableNames.Contains(r.TargetTable))
             .Select(r => (Source: r.SourceTable, Target: r.TargetTable))
@@ -102,7 +102,7 @@ public class GraphLayoutService
                     var targetNode = nodes.GetValueOrDefault(target);
                     if (sourceNode is null || targetNode is null) continue;
                     if (sourceNode != nodeA && targetNode != nodeA) continue;
-                    if (assignments[sourceNode.Table.Name] == assignments[targetNode.Table.Name]) continue;
+                    if (assignments[sourceNode.Table.QualifiedName] == assignments[targetNode.Table.QualifiedName]) continue;
 
                     var other = sourceNode == nodeA ? targetNode : sourceNode;
                     var dx = other.X - nodeA.X;
@@ -273,7 +273,7 @@ public class GraphLayoutService
                 {
                     var neighbor = source.Equals(current, StringComparison.OrdinalIgnoreCase) ? target :
                         target.Equals(current, StringComparison.OrdinalIgnoreCase) ? source : null;
-                    if (neighbor is null || assignments[neighbor] != string.Empty) continue;
+                    if (neighbor is null || !assignments.TryGetValue(neighbor, out var existingAssignment) || existingAssignment != string.Empty) continue;
 
                     assignments[neighbor] = assignments[current];
                     nextFrontier.Add(neighbor);
@@ -323,7 +323,7 @@ public class GraphLayoutService
         foreach (var hub in hubs)
         {
             var members = nodes.Values
-                .Where(node => assignments[node.Table.Name] == hub)
+                .Where(node => assignments[node.Table.QualifiedName] == hub)
                 .ToList();
             if (members.Count == 0) continue;
 
