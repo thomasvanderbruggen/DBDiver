@@ -6,10 +6,10 @@
 DB Diver assists in navigating SQL Server database schemas and finding join paths. It displays the database schemas in an interactive graph UI that allows for seeing nearby tables, assists in finding join paths with two clicks, and builds out the joins needed to run any queries.
 
 **Initial Schema View:** 
-![DB Diver Graph View](Assets/UI_Screenshot.png)
+![DB Diver Graph View](DBDiver/Assets/UI_Screenshot.png)
 
 **Query Building View:**
-![DB Diver Graph View](Assets/Query_Builder_Screenshot.png)
+![DB Diver Graph View](DBDiver/Assets/Query_Builder_Screenshot.png)
 
 ## ✨ Features
 
