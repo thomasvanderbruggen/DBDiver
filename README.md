@@ -23,7 +23,7 @@ DB Diver assists in navigating SQL Server database schemas and finding join path
 
 ## 🚀 Getting Started
 
-Download the application from the releases page and run! The application provides the query needed to build the ingested .csv schema file. 
+Download the application from the releases page and run! The application provides the query needed to build the ingested .csv schema file. There is a sample .csv file based on the Microsoft AdventureWorks database in /DBDiver/Assets/Sample_DB_Microsoft_AdventureWorks.csv
 
 ## 💻 Usage
 
