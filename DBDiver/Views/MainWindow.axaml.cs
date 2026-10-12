@@ -116,11 +116,8 @@ public partial class MainWindow : Window
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        var point = e.GetCurrentPoint(GraphHost);
-        if (point.Properties.IsRightButtonPressed && FindNodeFromVisual(e.Source as Control) is not null)
-            return;
-
-        if (point.Properties.IsLeftButtonPressed)
+        if (e.GetCurrentPoint(GraphHost).Properties.IsLeftButtonPressed &&
+            FindNodeFromVisual(e.Source as Control) is null)
         {
             _isPanning = true;
             _isWaitingForPotentialDragClick = true;
