@@ -31,6 +31,13 @@ public class SqlServerQueryRenderer
 
     private static void AppendTable(StringBuilder sql, QueryTable table)
     {
+        if (!string.IsNullOrEmpty(table.Schema))
+        {
+            sql.Append('[');
+            sql.Append(table.Schema);
+            sql.Append("].");
+        }
+
         sql.Append('[');
         sql.Append(table.Name);
         sql.Append("] AS [");

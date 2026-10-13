@@ -56,12 +56,14 @@ public partial class CustomJoinDialog : Window
     private static IReadOnlyList<string> GetColumnSuggestions(DbTable table, DbTable otherTable)
     {
         var knownColumns = table.Columns
+            .Select(column => column.Name)
             .Concat(table.PrimaryKeys)
             .Where(column => !string.IsNullOrWhiteSpace(column))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var matchingColumns = otherTable.Columns
+            .Select(column => column.Name)
             .Concat(otherTable.PrimaryKeys)
             .Where(knownColumns.Contains)
             .Distinct(StringComparer.OrdinalIgnoreCase)

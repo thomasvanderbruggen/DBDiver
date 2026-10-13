@@ -10,8 +10,11 @@ public enum QueryJoinType
 
 public class QueryTable
 {
+    public string Schema { get; init; } = string.Empty;
     public required string Name { get; init; }
     public required string Alias { get; init; }
+
+    public string QualifiedName => string.IsNullOrEmpty(Schema) ? Name : $"{Schema}.{Name}";
 }
 
 public class QueryJoin

@@ -129,13 +129,13 @@ public class MainViewModel : ViewModelBase
         
         var sourceNode = JoinPathSourceNode;
         var endNode = SelectedJoinPathTarget; 
-        if (endNode is null || sourceNode is null || string.Equals(sourceNode.Table.Name, endNode.Table.Name, StringComparison.OrdinalIgnoreCase) || _currentSchema is null)
+        if (endNode is null || sourceNode is null || string.Equals(sourceNode.Table.QualifiedName, endNode.Table.QualifiedName, StringComparison.OrdinalIgnoreCase) || _currentSchema is null)
         {
             // if (IsQueryBuilding) StatusText = "Query Building already started, please close query builder and search again"; 
             return; 
         }
         var joinPathDBRelationships = _queryPathService.FindShortestPaths(_currentSchema.Relationships,
-            [sourceNode.Table.Name], endNode.Table.Name).FirstOrDefault();
+            [sourceNode.Table.QualifiedName], endNode.Table.QualifiedName).FirstOrDefault();
         if (joinPathDBRelationships is null)
         {
             StatusText = "No join path found"; 
@@ -317,6 +317,14 @@ public class MainViewModel : ViewModelBase
 
         return adjacency;
     }
+
+    private static (string Schema, string Table) SplitQualifiedTableName(string qualifiedName)
+    {
+        var separatorIndex = qualifiedName.IndexOf('.');
+        return separatorIndex <= 0
+            ? (string.Empty, qualifiedName)
+            : (qualifiedName[..separatorIndex], qualifiedName[(separatorIndex + 1)..]);
+    }
     
     public ICommand CopySchemaCommand { get; }
     public ICommand LoadSchemaCommand { get; }
@@ -369,24 +377,38 @@ public class MainViewModel : ViewModelBase
             clipboard = desktop.MainWindow?.Clipboard;
         }
         await clipboard.SetTextAsync(@"SELECT
-        t.name AS [table],
-        STRING_AGG(pk_col.name, ';') WITHIN GROUP (ORDER BY pk_col.name) AS pk_columns,
-            fk_source.name AS fk_source_table,
-            fk_col.name AS fk_source_column,
-            fk_target.name AS fk_target_table,
-            fk_target_col.name AS fk_target_column
-            FROM sys.tables t
-        LEFT JOIN sys.indexes i ON i.object_id = t.object_id AND i.is_primary_key = 1
-        LEFT JOIN sys.index_columns ic ON ic.object_id = t.object_id AND ic.index_id = i.index_id
-        LEFT JOIN sys.columns pk_col ON pk_col.object_id = t.object_id AND pk_col.column_id = ic.column_id
-        LEFT JOIN sys.foreign_key_columns fkc ON fkc.parent_object_id = t.object_id
-        LEFT JOIN sys.tables fk_source ON fk_source.object_id = fkc.parent_object_id
-        LEFT JOIN sys.tables fk_target ON fk_target.object_id = fkc.referenced_object_id
-        LEFT JOIN sys.columns fk_col ON fk_col.object_id = fkc.parent_object_id AND fk_col.column_id = fkc.parent_column_id
-        LEFT JOIN sys.columns fk_target_col ON fk_target_col.object_id = fkc.referenced_object_id AND
-        fk_target_col.column_id = fkc.referenced_column_id
-        GROUP BY t.name, fk_source.name, fk_col.name, fk_target.name, fk_target_col.name
-            ORDER BY t.name;");
+    s.name                  AS [schema],
+    t.name                  AS [table],
+    c.column_id             AS column_id,
+    c.name                  AS [column],
+    ty.name                 AS data_type,
+    c.is_nullable           AS is_nullable,
+    CASE WHEN pkc.column_id IS NOT NULL THEN 1 ELSE 0 END AS is_pk,
+    pkc.key_ordinal         AS pk_ordinal,
+    fk.name                 AS fk_name,
+    fkc.constraint_column_id AS fk_ordinal,
+    rs.name                 AS fk_target_schema,
+    rt.name                 AS fk_target_table,
+    rc.name                 AS fk_target_column
+FROM sys.tables t
+JOIN sys.schemas s  ON s.schema_id = t.schema_id
+JOIN sys.columns c  ON c.object_id = t.object_id
+JOIN sys.types ty   ON ty.user_type_id = c.user_type_id
+LEFT JOIN (
+    SELECT ic.object_id, ic.column_id, ic.key_ordinal
+    FROM sys.indexes i
+    JOIN sys.index_columns ic
+      ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+    WHERE i.is_primary_key = 1
+) pkc ON pkc.object_id = c.object_id AND pkc.column_id = c.column_id
+LEFT JOIN sys.foreign_key_columns fkc
+  ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+LEFT JOIN sys.foreign_keys fk ON fk.object_id = fkc.constraint_object_id
+LEFT JOIN sys.tables rt  ON rt.object_id = fkc.referenced_object_id
+LEFT JOIN sys.schemas rs ON rs.schema_id = rt.schema_id
+LEFT JOIN sys.columns rc
+  ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
+ORDER BY s.name, t.name, c.column_id, fk.name;");
     }
 
     public void LoadSchemaFromFile()
@@ -602,20 +624,20 @@ public class MainViewModel : ViewModelBase
         var nodes = new Dictionary<string, GraphNode>(StringComparer.OrdinalIgnoreCase);
         var edges = new List<GraphEdge>();
 
-        var schemaTableNames = _currentSchema.Tables.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var schemaTableNames = _currentSchema.Tables.Select(t => t.QualifiedName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var connectedTableNames = _currentSchema.Relationships
             .SelectMany(r => new[] { r.SourceTable, r.TargetTable })
             .Where(schemaTableNames.Contains)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         IsolatedTables.Clear();
-        foreach (var table in _currentSchema.Tables.Where(t => !connectedTableNames.Contains(t.Name)))
+        foreach (var table in _currentSchema.Tables.Where(t => !connectedTableNames.Contains(t.QualifiedName)))
             IsolatedTables.Add(table);
 
-        foreach (var table in _currentSchema.Tables.Where(t => connectedTableNames.Contains(t.Name)))
+        foreach (var table in _currentSchema.Tables.Where(t => connectedTableNames.Contains(t.QualifiedName)))
         {
             var node = new GraphNode { Table = table };
-            nodes[table.Name] = node;
+            nodes[table.QualifiedName] = node;
         }
 
         foreach (var rel in _currentSchema.Relationships)
@@ -710,6 +732,7 @@ public class MainViewModel : ViewModelBase
         _activeQuery.AddTable(new QueryTable
         {
             Name = sourceNode.Table.Name,
+            Schema = sourceNode.Table.Schema,
             Alias = GetAlias(0)
         });
         GeneratedSql = string.Empty;
@@ -749,8 +772,8 @@ public class MainViewModel : ViewModelBase
         if (_activeQuery is not { } query || _currentSchema is null)
             return;
 
-        var targetTableName = targetNode.Table.Name;
-        if (query.Tables.Any(table => table.Name.Equals(targetTableName, StringComparison.OrdinalIgnoreCase)))
+        var targetTableName = targetNode.Table.QualifiedName;
+        if (query.Tables.Any(table => table.QualifiedName.Equals(targetTableName, StringComparison.OrdinalIgnoreCase)))
         {
             StatusText = $"{targetTableName} is already part of the query.";
             return;
@@ -758,7 +781,7 @@ public class MainViewModel : ViewModelBase
 
         var shortestPaths = _queryPathService.FindShortestPaths(
             _currentSchema.Relationships,
-            query.Tables.Select(table => table.Name).ToList(),
+            query.Tables.Select(table => table.QualifiedName).ToList(),
             targetTableName);
 
         if (shortestPaths.Count == 0)
@@ -914,16 +937,16 @@ public class MainViewModel : ViewModelBase
 
         foreach (var join in query.Joins)
         {
-            var leftName = join.LeftTable.Name;
-            var rightName = join.RightTable.Name;
+            var leftName = join.LeftTable.QualifiedName;
+            var rightName = join.RightTable.QualifiedName;
             var edge = GraphEdges.FirstOrDefault(candidate =>
             {
-                var forward = candidate.Source.Table.Name.Equals(leftName, StringComparison.OrdinalIgnoreCase) &&
-                              candidate.Target.Table.Name.Equals(rightName, StringComparison.OrdinalIgnoreCase) &&
+                var forward = candidate.Source.Table.QualifiedName.Equals(leftName, StringComparison.OrdinalIgnoreCase) &&
+                              candidate.Target.Table.QualifiedName.Equals(rightName, StringComparison.OrdinalIgnoreCase) &&
                               candidate.Relationship.SourceColumn.Equals(join.LeftColumn, StringComparison.OrdinalIgnoreCase) &&
                               candidate.Relationship.TargetColumn.Equals(join.RightColumn, StringComparison.OrdinalIgnoreCase);
-                var reverse = candidate.Source.Table.Name.Equals(rightName, StringComparison.OrdinalIgnoreCase) &&
-                              candidate.Target.Table.Name.Equals(leftName, StringComparison.OrdinalIgnoreCase) &&
+                var reverse = candidate.Source.Table.QualifiedName.Equals(rightName, StringComparison.OrdinalIgnoreCase) &&
+                              candidate.Target.Table.QualifiedName.Equals(leftName, StringComparison.OrdinalIgnoreCase) &&
                               candidate.Relationship.SourceColumn.Equals(join.RightColumn, StringComparison.OrdinalIgnoreCase) &&
                               candidate.Relationship.TargetColumn.Equals(join.LeftColumn, StringComparison.OrdinalIgnoreCase);
                 return forward || reverse;
@@ -943,8 +966,8 @@ public class MainViewModel : ViewModelBase
             return;
 
         var existingTable = query.Tables.FirstOrDefault(table =>
-            table.Name.Equals(relationship.SourceTable, StringComparison.OrdinalIgnoreCase) ||
-            table.Name.Equals(relationship.TargetTable, StringComparison.OrdinalIgnoreCase));
+            table.QualifiedName.Equals(relationship.SourceTable, StringComparison.OrdinalIgnoreCase) ||
+            table.QualifiedName.Equals(relationship.TargetTable, StringComparison.OrdinalIgnoreCase));
 
         if (existingTable is null)
         {
@@ -953,17 +976,19 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
-        var currentIsSource = existingTable.Name.Equals(relationship.SourceTable, StringComparison.OrdinalIgnoreCase);
+        var currentIsSource = existingTable.QualifiedName.Equals(relationship.SourceTable, StringComparison.OrdinalIgnoreCase);
         var neighborName = currentIsSource ? relationship.TargetTable : relationship.SourceTable;
+        var neighborIdentity = SplitQualifiedTableName(neighborName);
 
         var neighborTable = query.Tables.FirstOrDefault(table =>
-            table.Name.Equals(neighborName, StringComparison.OrdinalIgnoreCase));
+            table.QualifiedName.Equals(neighborName, StringComparison.OrdinalIgnoreCase));
 
         if (neighborTable is null)
         {
             neighborTable = new QueryTable
             {
-                Name = neighborName,
+                Schema = neighborIdentity.Schema,
+                Name = neighborIdentity.Table,
                 Alias = GetAlias(query.Tables.Count)
             };
             query.AddTable(neighborTable);
@@ -980,7 +1005,7 @@ public class MainViewModel : ViewModelBase
 
         AssignQueryJoinsToEdges();
         UpdateQueryEmphasis();
-        StatusText = $"Added {neighborName} via {relationship.SourceColumn} → {relationship.TargetColumn}.";
+        StatusText = $"{neighborName} added via {relationship.SourceColumn} → {relationship.TargetColumn}.";
     }
 
     private static string GetAlias(int index) => $"t{index}";
@@ -1092,9 +1117,9 @@ public class MainViewModel : ViewModelBase
 
         var relationship = new DbRelationship
         {
-            SourceTable = sourceNode.Table.Name,
+            SourceTable = sourceNode.Table.QualifiedName,
             SourceColumn = sourceColumn,
-            TargetTable = targetNode.Table.Name,
+            TargetTable = targetNode.Table.QualifiedName,
             TargetColumn = targetColumn,
             IsCustom = true
         };
