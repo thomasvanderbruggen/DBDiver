@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private bool _pinchActive;
     private bool _isWaitingForPotentialDragClick;
     private bool _isMinimapDragging;
+    private GraphNode? _contextMenuNode;
 
     public MainWindow()
     {
@@ -131,11 +132,16 @@ public partial class MainWindow : Window
 
     private void OnGraphPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || DataContext is not MainViewModel vm)
+        if (DataContext is not MainViewModel vm)
             return;
 
         if (FindNodeFromVisual(e.Source as Control) is { } node)
         {
+            _contextMenuNode = node;
+
+            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                return;
+
             if (vm.IsAwaitingCustomJoinTarget)
             {
                 _ = vm.CompleteCustomJoinTargetAsync(node);
@@ -240,21 +246,23 @@ public partial class MainWindow : Window
         _isWaitingForPotentialDragClick = false;
     }
 
-    private void OnNodeContextMenuRequested(object? sender, RoutedEventArgs e)
+    private void OnNodeContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (sender is Border { Tag: GraphNode node, ContextMenu: { } contextMenu } && DataContext is MainViewModel vm)
+        if (sender is ContextMenu contextMenu && DataContext is MainViewModel vm)
         {
             var menuItems = contextMenu.Items.OfType<MenuItem>().ToDictionary(item => item.Header?.ToString() ?? string.Empty, item => item);
+            var node = _contextMenuNode;
 
             if (menuItems.TryGetValue("Add Custom Join Path", out var addCustomJoinItem))
                 addCustomJoinItem.IsEnabled = !vm.IsAwaitingCustomJoinTarget && !vm.IsQueryBuilding;
             if (menuItems.TryGetValue("Build Query", out var buildQueryItem))
-                buildQueryItem.IsEnabled = !vm.IsAwaitingCustomJoinTarget && !vm.IsQueryBuilding;
+                buildQueryItem.IsVisible = !vm.IsAwaitingCustomJoinTarget && !vm.IsQueryBuilding;
             if (menuItems.TryGetValue("Finish Query", out var finishQueryItem))
-                finishQueryItem.IsEnabled = vm.IsQueryBuilding && vm.IsActiveQueryTable(node.Table.Name);
+            {
+                finishQueryItem.IsVisible = vm.IsQueryBuilding;
+                finishQueryItem.IsEnabled = node is not null && vm.IsActiveQueryTable(node.Table.Name);
+            }
         }
-
-        e.Handled = true;
     }
 
     private void OnAddCustomJoinClick(object? sender, RoutedEventArgs e)
@@ -396,6 +404,12 @@ public partial class MainWindow : Window
             vm.SetNodeHover(node, true);
             UpdateNodeScreenScaling();
         }
+    }
+
+    private void OnNodePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (sender is Border { Tag: GraphNode node })
+            _contextMenuNode = node;
     }
 
     private void OnNodePointerLeave(object? sender, PointerEventArgs e)
