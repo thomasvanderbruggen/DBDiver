@@ -72,16 +72,17 @@
                         </ItemsControl.ItemContainerTheme>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Classes="graph-node" Classes.dim="{Binding IsDimmed}" Classes.hi="{Binding IsHighlighted}"
+                                        <Border Classes="graph-node" Classes.dim="{Binding IsDimmed}" Classes.hi="{Binding IsHighlighted}"
                                         Classes.hub="{Binding IsHub}" Classes.selected="{Binding IsSelected}" Classes.hop1="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopOneConverter}}" Classes.hop2="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopTwoConverter}}" Classes.hop3="{Binding HopDepth, Converter={x:Static vm:MainViewModel.HopThreeConverter}}" Tag="{Binding}" Margin="{Binding Position}"
                                         BorderThickness="1.5" CornerRadius="6" Padding="10,6" Background="{DynamicResource GraphNodeBackgroundBrush}"
                                         Classes.custom-source="{Binding IsCustomJoinSource}"
-                                        PointerEntered="OnNodePointerEnter" PointerExited="OnNodePointerLeave">
+                                        PointerEntered="OnNodePointerEnter" PointerExited="OnNodePointerLeave"
+                                        PointerReleased="OnNodePointerReleased">
                                     <TextBlock Text="{Binding Table.Name}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource GraphNodeTextBrush}"
                                                TextTrimming="CharacterEllipsis" />
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu Opening="OnNodeContextMenuOpening" Tag="{Binding}">
                                             <MenuItem x:Name="AddCustomJoinMenuItem" Tag="{Binding}" Header="Add Custom Join Path" Click="OnAddCustomJoinClick" />
                                             <MenuItem x:Name="BuildQueryMenuItem" Tag="{Binding}" Header="Build Query" Click="OnBuildQueryClick" />
                                             <MenuItem x:Name="FinishQueryMenuItem" Tag="{Binding}" Header="Finish Query" Click="OnFinishQueryClick" />
