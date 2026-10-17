@@ -46,9 +46,10 @@ Download the application from the releases page and run! The application provide
         - Change hop count to alter how many tables the UI will traverse to show nearby tables
 
 ## 🗺️ Feature Roadmap
-1. Add direct database connections
-2. WHERE Clause building
+1. WHERE Clause building
+2. Add direct database connections
 3. UNION and subquery support 
+
 
 ## 📝 License 
 

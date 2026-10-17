@@ -28,7 +28,7 @@
             <Button x:Name="HelpButton" Content="Help" Margin="8,0,0,0" />
         </StackPanel>
 
-        <Grid Grid.Row="2" Margin="10" ColumnDefinitions="*,260,10">
+        <Grid Grid.Row="2" Margin="10" ColumnDefinitions="*,Auto,10">
             <Grid Grid.Column="0" x:Name="ViewportRoot">
                     <Border Background="{DynamicResource GraphBackgroundBrush}" x:Name="ClipBorder" >
                     <Grid x:Name="GraphHost" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -164,7 +164,8 @@
 
             <Border Grid.Column="1" IsVisible="{Binding IsSchemaLoaded}" Background="{DynamicResource SidebarBackgroundBrush}" BorderBrush="{DynamicResource SidebarBorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="10">
-                <Grid RowDefinitions="Auto,*,Auto">
+                <Grid>
+                <Grid IsVisible="{Binding !IsQueryBuilding}" Width="260" RowDefinitions="Auto,*,Auto">
                     <TextBlock Grid.Row="0" Text="Isolated Tables" FontWeight="SemiBold" Foreground="#E2E8F0" />
                     <ScrollViewer Grid.Row="1" Margin="0,8,0,0">
                         <ItemsControl ItemsSource="{Binding IsolatedTables}">
@@ -181,6 +182,90 @@
                     </ScrollViewer>
                     <TextBlock Grid.Row="2" Text="{Binding IsolatedTables.Count, StringFormat='{}{0} tables'}"
                                FontSize="11" Foreground="{DynamicResource SidebarTextBrush}" Margin="0,8,0,0" />
+                </Grid>
+
+                <Grid IsVisible="{Binding IsQueryBuilding}" Width="380" RowDefinitions="Auto,*,Auto,Auto">
+                    <TextBlock Grid.Row="0" Text="WHERE Clause Builder" FontWeight="SemiBold" Foreground="#E2E8F0" />
+                    <ScrollViewer Grid.Row="1" Margin="0,8,0,8">
+                        <StackPanel>
+                        <ItemsControl ItemsSource="{Binding WhereClauses}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,8">
+                                        <Border Grid.Row="0" IsVisible="{Binding !IsFirst}" Margin="0,0,0,4"
+                                                Background="{DynamicResource SidebarItemBackgroundBrush}"
+                                                BorderBrush="{DynamicResource SidebarItemBorderBrush}"
+                                                BorderThickness="1" CornerRadius="5" Padding="8,5">
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <TextBlock Text="Connector" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
+                                                             Content="AND" IsChecked="{Binding IsAnd, Mode=TwoWay}" />
+                                                <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
+                                                             Content="OR" IsChecked="{Binding IsOr, Mode=TwoWay}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Row="1" Background="{DynamicResource SidebarItemBackgroundBrush}" BorderBrush="{DynamicResource SidebarItemBorderBrush}" BorderThickness="1"
+                                                CornerRadius="5" Padding="8">
+                                        <StackPanel Spacing="6">
+                                            <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
+                                                <TextBlock Grid.Column="0" Text="Column" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <ComboBox Grid.Row="1" Margin="0,4,0,0" ItemsSource="{Binding Columns}"
+                                                          SelectedItem="{Binding SelectedColumn, Mode=TwoWay}">
+                                                    <ComboBox.ItemContainerTheme>
+                                                        <ControlTheme TargetType="ComboBoxItem">
+                                                            <Setter Property="IsEnabled" Value="{Binding !IsHeader}" />
+                                                            <Setter Property="Padding" Value="0" />
+                                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                                            <Setter Property="MinWidth" Value="{Binding $parent[ComboBox].ActualWidth}" />
+                                                        </ControlTheme>
+                                                    </ComboBox.ItemContainerTheme>
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Classes="where-table-header"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    Background="Transparent"
+                                                                    Classes.header="{Binding IsHeader}">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                       FontWeight="{Binding IsHeader, Converter={x:Static vm:MainViewModel.WhereHeaderFontConverter}}"
+                                                                       Foreground="{Binding IsHeader, Converter={x:Static vm:MainViewModel.WhereHeaderForegroundConverter}, Mode=OneWay}" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                    <ComboBox.SelectionBoxItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding SelectedDisplayName}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.SelectionBoxItemTemplate>
+                                                </ComboBox>
+                                            </Grid>
+                                            <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
+                                                <TextBlock Grid.Column="0" Text="Operator" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <ComboBox Grid.Row="1" Margin="0,4,0,0" ItemsSource="{Binding Operators}"
+                                                          SelectedItem="{Binding SelectedOperator, Mode=TwoWay}"
+                                                          DisplayMemberBinding="{Binding DisplayName}" />
+                                            </Grid>
+                                            <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4" IsVisible="{Binding RequiresValue, FallbackValue=False}">
+                                                <TextBlock Grid.Column="0" Text="Value" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <TextBox Grid.Row="1" Margin="0,4,0,0" Text="{Binding Value}" PlaceholderText="Value" />
+                                            </Grid>
+                                            <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4" IsVisible="{Binding UsesBetween}">
+                                                <TextBlock Grid.Column="0" Text="Between Value" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <TextBox Grid.Row="1" Margin="0,4,0,0" Text="{Binding BetweenValue}" PlaceholderText="Between Value" />
+                                            </Grid>
+                                            <Button x:Name="RemoveClauseButton" Content="Remove Clause" Command="{Binding $parent[ItemsControl].DataContext.RemoveWhereClauseCommand}" CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Classes="where-add-clause" Content="Add Clause" Command="{Binding AddWhereClauseCommand}" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" Text="Fill in a clause to include it in the SQL." FontSize="11" Foreground="{DynamicResource SidebarTextBrush}" Margin="0,0,0,0" TextWrapping="Wrap" />
+                </Grid>
                 </Grid>
             </Border>
         </Grid>
@@ -272,9 +357,22 @@
         <SolidColorBrush x:Key="SidebarTextBrush" Color="#64748B" />
         <SolidColorBrush x:Key="StatusbarBackgroundBrush" Color="#111827" />
         <SolidColorBrush x:Key="StatusbarTextBrush" Color="#9CA3AF" />
+        <SolidColorBrush x:Key="QueryBuilderWhereTableHeaderBrush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="QueryBuilderAddClauseButtonBrush" Color="#60A5FA" />
     </Window.Resources>
 
     <Window.Styles>
+        <Style Selector="Border.where-table-header">
+        </Style>
+        <Style Selector="Border.where-table-header.header">
+            <Setter Property="Background" Value="#16213A" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Margin" Value="0,4,0,2" />
+        </Style>
+        <Style Selector="Button.where-add-clause">
+            <Setter Property="Background" Value="{DynamicResource QueryBuilderAddClauseButtonBrush}" />
+        </Style>
         <Style Selector="Border.viewport-controls">
             <Setter Property="Background" Value="{DynamicResource ToolbarButtonBackgroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource ToolbarButtonBorderBrush}" />

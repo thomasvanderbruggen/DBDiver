@@ -212,12 +212,24 @@ public partial class SettingsWindow : Window
             nameof(QueryBuilderSettings.InnerColor),
             nameof(QueryBuilderSettings.LeftColor),
             nameof(QueryBuilderSettings.RightColor),
-            nameof(QueryBuilderSettings.FullColor)
+            nameof(QueryBuilderSettings.FullColor),
+            nameof(QueryBuilderSettings.WhereTableHeaderColor),
+            nameof(QueryBuilderSettings.AddClauseButtonColor)
         };
         foreach (var propertyName in colorProperties)
         {
             var panel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Tag = propertyName };
-            panel.Children.Add(new TextBlock { Text = propertyName.Replace("Color", " Join Color"), Width = 200, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+            panel.Children.Add(new TextBlock
+            {
+                Text = propertyName switch
+                {
+                    nameof(QueryBuilderSettings.WhereTableHeaderColor) => "Where Table Header Color",
+                    nameof(QueryBuilderSettings.AddClauseButtonColor) => "Add Clause Button Color",
+                    _ => propertyName.Replace("Color", " Join Color")
+                },
+                Width = 200,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            });
 
             var current = (string?)typeof(QueryBuilderSettings).GetProperty(propertyName)?.GetValue(_viewModel.QueryBuilder);
             var input = new TextBox { Width = 120, Text = current };

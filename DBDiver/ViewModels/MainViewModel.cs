@@ -17,7 +17,20 @@ public class MainViewModel : ViewModelBase
     public static readonly Avalonia.Data.Converters.FuncValueConverter<int, bool> HopOneConverter = new(value => value >= 1);
     public static readonly Avalonia.Data.Converters.FuncValueConverter<int, bool> HopTwoConverter = new(value => value >= 2);
     public static readonly Avalonia.Data.Converters.FuncValueConverter<int, bool> HopThreeConverter = new(value => value >= 3);
+    public static readonly Avalonia.Data.Converters.FuncValueConverter<bool, Avalonia.Media.FontWeight> WhereHeaderFontConverter =
+        new(isHeader => isHeader ? Avalonia.Media.FontWeight.Bold : Avalonia.Media.FontWeight.Normal);
+    public static readonly Avalonia.Data.Converters.FuncValueConverter<bool, Avalonia.Media.IBrush> WhereHeaderForegroundConverter =
+        new(isHeader =>
+        {
+            if (!isHeader)
+                return Avalonia.Media.Brushes.White;
 
+            if (Avalonia.Application.Current?.TryGetResource("QueryBuilderWhereTableHeaderBrush", Avalonia.Application.Current.ActualThemeVariant, out var resource) == true &&
+                resource is Avalonia.Media.IBrush brush)
+                return brush;
+
+            return Avalonia.Media.Brush.Parse("#60A5FA");
+        });
     private readonly ISchemaService _schemaService;
     private readonly GraphLayoutService _graphLayout = new();
     private readonly SettingsService _settingsService = new();
@@ -49,6 +62,12 @@ public class MainViewModel : ViewModelBase
                 BeginCustomJoin(graphNode);
         });
         CancelCustomJoinCommand = new RelayCommand(_ => CancelCustomJoin());
+        AddWhereClauseCommand = new RelayCommand(_ => AddWhereClause());
+        RemoveWhereClauseCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is WhereClauseViewModel clause)
+                RemoveWhereClause(clause);
+        });
     }
 
     public ObservableCollection<DbTable> Tables { get; } = [];
@@ -56,6 +75,7 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<GraphNode> GraphNodes { get; } = [];
     public ObservableCollection<GraphEdge> GraphEdges { get; } = [];
     public ObservableCollection<DbTable> IsolatedTables { get; } = [];
+    public ObservableCollection<WhereClauseViewModel> WhereClauses { get; } = [];
     public Dictionary<string, GraphNode> NodeIndex { get; } = new(StringComparer.OrdinalIgnoreCase);
     public event Action? GraphLayoutCompleted;
     public event Action<GraphNode>? SelectionChanged;
@@ -337,6 +357,35 @@ public class MainViewModel : ViewModelBase
     public ICommand DecreaseHopsCommand { get; }
     public ICommand StartCustomJoinCommand { get; }
     public ICommand CancelCustomJoinCommand { get; }
+    public ICommand AddWhereClauseCommand { get; }
+    public ICommand RemoveWhereClauseCommand { get; }
+
+    private void AddWhereClause()
+    {
+        if (_activeQuery is null)
+            return;
+
+        var connector = WhereClauses.Count == 0
+            ? WhereClauseConnector.And
+            : WhereClauses[^1].Connector;
+        WhereClauses.Add(new WhereClauseViewModel(GetActiveQueryColumns(_activeQuery), connector, WhereClauses.Count));
+        OnPropertyChanged(nameof(WhereClauses));
+    }
+
+    private void RemoveWhereClause(WhereClauseViewModel clause)
+    {
+        if (!WhereClauses.Remove(clause))
+            return;
+
+        RefreshWhereClauseIndexes();
+        OnPropertyChanged(nameof(WhereClauses));
+    }
+
+    private void RefreshWhereClauseIndexes()
+    {
+        for (var index = 0; index < WhereClauses.Count; index++)
+            WhereClauses[index].RefreshIndexes(index);
+    }
 
     private void ZoomIn() => ZoomRequested?.Invoke(true);
     private void ZoomOut() => ZoomRequested?.Invoke(false);
@@ -592,6 +641,8 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         SetBrush("QueryBuilderLeftJoinColorBrush", settings.LeftColor);
         SetBrush("QueryBuilderRightJoinColorBrush", settings.RightColor);
         SetBrush("QueryBuilderFullJoinColorBrush", settings.FullColor);
+        SetBrush("QueryBuilderWhereTableHeaderBrush", settings.WhereTableHeaderColor);
+        SetBrush("QueryBuilderAddClauseButtonBrush", settings.AddClauseButtonColor);
     }
 
     private void SetBrush(string resourceKey, string colorValue)
@@ -610,6 +661,51 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         foreach (var rel in schema.Relationships)
             Relationships.Add(rel);
         _currentSchema = schema;
+    }
+
+    private void RebuildWhereClauses()
+    {
+        if (_activeQuery is not { } query || _currentSchema is null)
+        {
+            WhereClauses.Clear();
+            OnPropertyChanged(nameof(WhereClauses));
+            return;
+        }
+
+        var columns = GetActiveQueryColumns(query);
+
+        foreach (var clause in WhereClauses)
+            clause.UpdateColumns(columns);
+
+        if (WhereClauses.Count == 0)
+            WhereClauses.Add(new WhereClauseViewModel(columns, WhereClauseConnector.And, 0));
+        OnPropertyChanged(nameof(WhereClauses));
+    }
+
+    private List<WhereDropdownOption> GetActiveQueryColumns(QueryModel query)
+    {
+        if (_currentSchema is null)
+            return [];
+
+        return query.Tables
+            .SelectMany(queryTable => _currentSchema.Tables
+                .Where(schemaTable => schemaTable.QualifiedName.Equals(queryTable.QualifiedName, StringComparison.OrdinalIgnoreCase))
+                .Select(schemaTable => new
+                {
+                    QueryTable = queryTable,
+                    SchemaTable = schemaTable
+                }))
+            .SelectMany(table => BuildWhereDropdownOptions(table.QueryTable, table.SchemaTable.Columns))
+            .ToList();
+    }
+
+    private static List<WhereDropdownOption> BuildWhereDropdownOptions(QueryTable queryTable, IReadOnlyList<DbColumn> columns)
+    {
+        var options = new List<WhereDropdownOption> { new(queryTable.Name) };
+        options.AddRange(columns
+            .OrderBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(column => new WhereDropdownOption(new WhereColumnOption(queryTable, column))));
+        return options;
     }
 
     public void ComputeGraphLayout()
@@ -733,11 +829,12 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         {
             Name = sourceNode.Table.Name,
             Schema = sourceNode.Table.Schema,
-            Alias = GetAlias(0)
+            Alias = GetAlias(sourceNode.Table.Name, _activeQuery.Tables)
         });
         GeneratedSql = string.Empty;
         OnPropertyChanged(nameof(IsQueryBuilding));
         AssignQueryJoinsToEdges();
+        RebuildWhereClauses();
         StatusText = $"Building query from {sourceNode.Table.Name}. Select additional tables, then use Finish Query.";
 
         Log.Information("Started query from {TableName}", sourceNode.Table.Name);
@@ -850,12 +947,30 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         if (_activeQuery is not { } query)
             return;
 
+        query.ClearWhereClauses();
+        var hasIncompleteClause = false;
+
+        foreach (var clauseViewModel in WhereClauses)
+        {
+            if (clauseViewModel.BuildClause() is not { } clause)
+            {
+                if (clauseViewModel.SelectedColumn is not null && clauseViewModel.SelectedOperator is not null)
+                    hasIncompleteClause = true;
+                continue;
+            }
+
+            query.AddWhereClause(clause);
+        }
+
         GeneratedSql = _queryRenderer.Render(query);
-        StatusText = "Query finished. Copy the SQL, then reset to build another query.";
+        _ = _queryRenderer.Render(query, out var parameters);
+        StatusText = hasIncompleteClause
+            ? "Query finished, but incomplete WHERE clauses were not included."
+            : "Query finished. Copy the SQL, then reset to build another query.";
         UpdateFinishedQueryEmphasis();
 
-        Log.Information("Finished query with {TableCount} tables and {JoinCount} joins",
-            query.Tables.Count, query.Joins.Count);
+        Log.Information("Finished query with {TableCount} tables, {JoinCount} joins, {WhereClauseCount} WHERE clauses, and {ParameterCount} parameters",
+            query.Tables.Count, query.Joins.Count, query.WhereClauses.Count, parameters.Count);
         QueryFinished?.Invoke();
     }
 
@@ -888,6 +1003,7 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         _activeQuery = null;
         GeneratedSql = string.Empty;
         OnPropertyChanged(nameof(IsQueryBuilding));
+        RebuildWhereClauses();
         AssignQueryJoinsToEdges();
         ClearQueryEmphasis();
         StatusText = "Query reset.";
@@ -989,7 +1105,7 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
             {
                 Schema = neighborIdentity.Schema,
                 Name = neighborIdentity.Table,
-                Alias = GetAlias(query.Tables.Count)
+                Alias = GetAlias(neighborIdentity.Table, query.Tables)
             };
             query.AddTable(neighborTable);
         }
@@ -1004,11 +1120,37 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         });
 
         AssignQueryJoinsToEdges();
+        RebuildWhereClauses();
         UpdateQueryEmphasis();
         StatusText = $"{neighborName} added via {relationship.SourceColumn} → {relationship.TargetColumn}.";
     }
 
-    private static string GetAlias(int index) => $"t{index}";
+    private static string GetAlias(string tableName, IReadOnlyList<QueryTable> existingTables)
+    {
+        var prefix = new string(tableName.Where(char.IsUpper).Select(char.ToLowerInvariant).ToArray());
+        if (prefix.Length == 0)
+            prefix = "t";
+
+        var prefixLength = prefix.Length;
+        var index = existingTables.Count(table =>
+        {
+            var alias = table.Alias;
+            return alias.Length > prefixLength &&
+                   char.IsDigit(alias[^1]) &&
+                   alias[..^CountDigits(alias)].Equals(prefix, StringComparison.OrdinalIgnoreCase);
+        });
+
+        return $"{prefix}{index}";
+    }
+
+    private static int CountDigits(string value)
+    {
+        var count = 0;
+        for (var i = value.Length - 1; i >= 0 && char.IsDigit(value[i]); i--)
+            count++;
+
+        return count;
+    }
 
     private void ClearQueryEmphasis()
     {

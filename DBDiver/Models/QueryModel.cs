@@ -8,6 +8,59 @@ public enum QueryJoinType
     Full
 }
 
+public enum WhereClauseDataType
+{
+    Numeric,
+    String,
+    Date,
+    Bit,
+    Unsupported
+}
+
+public enum WhereClauseOperator
+{
+    Equals,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+    NotEqual,
+    Like,
+    NotLike,
+    Between,
+    IsNull,
+    IsNotNull
+}
+
+public enum WhereClauseConnector
+{
+    And,
+    Or
+}
+
+public class QueryParameter
+{
+    public QueryParameter(string name, object value)
+    {
+        Name = name;
+        Value = value;
+    }
+
+    public string Name { get; }
+    public object Value { get; }
+}
+
+public class QueryWhereClause
+{
+    public required QueryTable Table { get; init; }
+    public required string Column { get; init; }
+    public required WhereClauseDataType DataType { get; init; }
+    public required WhereClauseOperator Operator { get; init; }
+    public string? Value { get; init; }
+    public string? BetweenValue { get; init; }
+    public WhereClauseConnector Connector { get; init; }
+}
+
 public class QueryTable
 {
     public string Schema { get; init; } = string.Empty;
@@ -30,9 +83,11 @@ public class QueryModel
 {
     private readonly List<QueryTable> _tables = [];
     private readonly List<QueryJoin> _joins = [];
+    private readonly List<QueryWhereClause> _whereClauses = [];
 
     public IReadOnlyList<QueryTable> Tables => _tables;
     public IReadOnlyList<QueryJoin> Joins => _joins;
+    public IReadOnlyList<QueryWhereClause> WhereClauses => _whereClauses;
 
     public void AddTable(QueryTable table)
     {
@@ -42,5 +97,15 @@ public class QueryModel
     public void AddJoin(QueryJoin join)
     {
         _joins.Add(join);
+    }
+
+    public void AddWhereClause(QueryWhereClause clause)
+    {
+        _whereClauses.Add(clause);
+    }
+
+    public void ClearWhereClauses()
+    {
+        _whereClauses.Clear();
     }
 }
