@@ -305,6 +305,7 @@ public partial class SettingsWindow : Window
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         _viewModel.Save();
+        Close();
     }
 
     private void OnResetClick(object? sender, RoutedEventArgs e)

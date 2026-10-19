@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private bool _isWaitingForPotentialDragClick;
     private bool _isMinimapDragging;
     private GraphNode? _contextMenuNode;
+    private SettingsOverlay? _settingsOverlay;
 
     public MainWindow()
     {
@@ -299,22 +300,20 @@ public partial class MainWindow : Window
 
     private void OnSettingsClick(object? sender, RoutedEventArgs e)
     {
-        var openStopwatch = System.Diagnostics.Stopwatch.StartNew();
-        Serilog.Log.Information("[SettingsTiming] OnSettingsClick start");
         if (DataContext is not MainViewModel vm)
-        {
-            Serilog.Log.Information("[SettingsTiming] DataContext missing, aborting after {ElapsedMs} ms", openStopwatch.ElapsedMilliseconds);
             return;
+
+        if (_settingsOverlay is null)
+        {
+            var settingsService = new SettingsService();
+            var settingsViewModel = new SettingsViewModel(settingsService, settingsService.Load());
+            settingsViewModel.SettingsChanged += vm.ApplySettingsDebounced;
+            _settingsOverlay = new SettingsOverlay(settingsViewModel);
+            _settingsOverlay.CloseRequested += () => SettingsOverlayHost.IsVisible = false;
+            SettingsOverlayPresenter.Content = _settingsOverlay;
         }
 
-        var settingsService = new SettingsService();
-        var settingsViewModel = new SettingsViewModel(settingsService, settingsService.Load());
-        settingsViewModel.SettingsChanged += settings => vm.ApplySettings(settings);
-        var settingsOverlay = new SettingsOverlay(settingsViewModel);
-        settingsOverlay.CloseRequested += () => SettingsOverlayHost.IsVisible = false;
-        SettingsOverlayPresenter.Content = settingsOverlay;
         SettingsOverlayHost.IsVisible = true;
-        
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

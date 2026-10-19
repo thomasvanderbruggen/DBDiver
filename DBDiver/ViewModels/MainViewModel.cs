@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
+using Avalonia.Threading;
 using DBDiver.Views;
 using DBDiver.Models;
 using DBDiver.Services;
@@ -41,6 +42,8 @@ public class MainViewModel : ViewModelBase
     private string _statusText = "Ready";
     private DbSchema? _currentSchema;
     private bool _isSchemaLoaded;
+    private readonly DispatcherTimer _settingsApplyTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private AppSettings? _pendingSettings;
     public AppSettings CurrentSettings => _appSettings;
 
     public MainViewModel(ISchemaService schemaService)
@@ -68,6 +71,7 @@ public class MainViewModel : ViewModelBase
             if (parameter is WhereClauseViewModel clause)
                 RemoveWhereClause(clause);
         });
+        _settingsApplyTimer.Tick += (_, _) => ApplyPendingSettings();
     }
 
     public ObservableCollection<DbTable> Tables { get; } = [];
@@ -306,6 +310,9 @@ public class MainViewModel : ViewModelBase
         var queue = new Queue<GraphNode>();
         queue.Enqueue(startNode);
 
+        if (!adjacency.ContainsKey(startNode))
+            return visited;
+
         while (queue.Count > 0)
         {
             var currentNode = queue.Dequeue();
@@ -331,8 +338,11 @@ public class MainViewModel : ViewModelBase
         var adjacency = GraphNodes.ToDictionary(node => node, _ => new List<GraphNode>());
         foreach (var edge in GraphEdges)
         {
-            adjacency[edge.Source].Add(edge.Target);
-            adjacency[edge.Target].Add(edge.Source);
+            if (adjacency.ContainsKey(edge.Source) && adjacency.ContainsKey(edge.Target))
+            {
+                adjacency[edge.Source].Add(edge.Target);
+                adjacency[edge.Target].Add(edge.Source);
+            }
         }
 
         return adjacency;
@@ -563,6 +573,24 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         }
     }
 
+    public void ApplySettingsDebounced(AppSettings settings)
+    {
+        _pendingSettings = settings;
+        _settingsApplyTimer.Stop();
+        _settingsApplyTimer.Start();
+    }
+
+    private void ApplyPendingSettings()
+    {
+        _settingsApplyTimer.Stop();
+        if (_pendingSettings is null)
+            return;
+
+        var settings = _pendingSettings;
+        _pendingSettings = null;
+        ApplySettings(settings);
+    }
+
     public Avalonia.Controls.Window? OwnerWindow { get; set; }
 
     private async Task LoadSchemaFromPickerAsync(Avalonia.Platform.Storage.IStorageProvider storageProvider,
@@ -758,6 +786,7 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         foreach (var (name, node) in nodes)
             NodeIndex[name] = node;
 
+        SelectedNode = null;
         GraphNodes.Clear();
         foreach (var node in nodes.Values)
             GraphNodes.Add(node);
@@ -767,7 +796,6 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
             GraphEdges.Add(edge);
 
         OnPropertyChanged(nameof(GraphNodes));
-        SelectedNode = null;
         foreach (var graphNode in GraphNodes)
         {
             graphNode.IsHovered = false;

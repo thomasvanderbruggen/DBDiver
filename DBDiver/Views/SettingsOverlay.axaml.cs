@@ -22,8 +22,13 @@ public partial class SettingsOverlay : UserControl
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
-        BuildThemeEditor();
+        ThemeColorList.ItemsSource = typeof(GraphThemeSettings).GetProperties()
+            .Where(property => property.PropertyType == typeof(string))
+            .Select(property => property.Name)
+            .ToList();
         LayoutTabControl.SelectionChanged += OnLayoutTabSelected;
+        if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" })
+            BuildThemeEditor();
         SaveButton.Click += OnSaveClick;
         ResetButton.Click += OnResetClick;
         CloseButton.Click += (_, _) => CloseRequested?.Invoke();
@@ -33,6 +38,8 @@ public partial class SettingsOverlay : UserControl
     {
         if (LayoutTabControl.SelectedItem is TabItem { Header: "Layout Physics" } && LayoutPanel.Children.Count == 0)
             BuildLayoutEditor();
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" } && ThemeColorList.ItemTemplate is null)
+            BuildThemeEditor();
     }
 
     private void BuildThemeEditor()
@@ -147,6 +154,7 @@ public partial class SettingsOverlay : UserControl
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         _viewModel.Save();
+        CloseRequested?.Invoke();
     }
 
     private void OnResetClick(object? sender, RoutedEventArgs e)

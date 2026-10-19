@@ -130,7 +130,7 @@ public class GraphLayoutService
                 nodeA.X += nodeA.VelocityX;
                 nodeA.Y += nodeA.VelocityY;
 
-                var displacementMag = temperature;
+                var displacementMag = Math.Sqrt(moveX * moveX + moveY * moveY);
                 if (displacementMag > maxDisplacement)
                     maxDisplacement = displacementMag;
             }
