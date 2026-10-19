@@ -121,12 +121,24 @@ public class SqlServerQueryRenderer
 
         return dataType switch
         {
-            WhereClauseDataType.Numeric => valueText,
-            WhereClauseDataType.Bit => valueText.Equals("true", StringComparison.OrdinalIgnoreCase) ? "1" : valueText.Equals("false", StringComparison.OrdinalIgnoreCase) ? "0" : valueText,
-            WhereClauseDataType.Date or WhereClauseDataType.String => $"'{valueText.Replace("'", "''", StringComparison.Ordinal)}'",
+            WhereClauseDataType.Numeric or
+            WhereClauseDataType.Bit or
+            WhereClauseDataType.Binary or
+            WhereClauseDataType.RowVersion => valueText,
+            WhereClauseDataType.HierarchyId => $"CAST({QuoteSqlString(valueText)} AS hierarchyid)",
+            WhereClauseDataType.Date or
+            WhereClauseDataType.Time or
+            WhereClauseDataType.DateTime or
+            WhereClauseDataType.DateTimeOffset or
+            WhereClauseDataType.String or
+            WhereClauseDataType.LegacyText or
+            WhereClauseDataType.Guid => QuoteSqlString(valueText),
             _ => throw new ArgumentOutOfRangeException(nameof(dataType), dataType, "Unsupported WHERE data type")
         };
     }
+
+    private static string QuoteSqlString(string value) =>
+        $"N'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 
     private static string GetOperator(WhereClauseOperator whereOperator) => whereOperator switch
     {

@@ -12,8 +12,16 @@ public enum WhereClauseDataType
 {
     Numeric,
     String,
+    LegacyText,
     Date,
+    Time,
+    DateTime,
+    DateTimeOffset,
     Bit,
+    Binary,
+    RowVersion,
+    Guid,
+    HierarchyId,
     Unsupported
 }
 

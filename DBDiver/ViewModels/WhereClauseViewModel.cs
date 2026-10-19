@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using DBDiver.Models;
 
 namespace DBDiver.ViewModels;
@@ -75,9 +76,19 @@ public static class WhereClauseFactory
     public static WhereClauseDataType GetDataType(DbColumn column) => column.DataType.ToLowerInvariant() switch
     {
         "bigint" or "decimal" or "double" or "float" or "int" or "money" or "numeric" or "real" or "smallint" or "smallmoney" or "tinyint" => WhereClauseDataType.Numeric,
-        "char" or "nchar" or "ntext" or "nvarchar" or "text" or "varchar" or "binary" or "varbinary" or "json" or "uniqueidentifier" => WhereClauseDataType.String,
-        "date" or "datetime" or "datetime2" or "datetimeoffset" or "smalldatetime" => WhereClauseDataType.Date,
+        "char" or "varchar" => WhereClauseDataType.String,
+        "nchar" or "nvarchar" => WhereClauseDataType.String,
+        "text" or "ntext" => WhereClauseDataType.LegacyText,
+        "binary" or "varbinary" => WhereClauseDataType.Binary,
+        "rowversion" or "timestamp" => WhereClauseDataType.RowVersion,
+        "date" => WhereClauseDataType.Date,
+        "time" => WhereClauseDataType.Time,
+        "datetime" or "datetime2" or "smalldatetime" => WhereClauseDataType.DateTime,
+        "datetimeoffset" => WhereClauseDataType.DateTimeOffset,
         "bit" => WhereClauseDataType.Bit,
+        "uniqueidentifier" => WhereClauseDataType.Guid,
+        "hierarchyid" => WhereClauseDataType.HierarchyId,
+        "cursor" or "geography" or "geometry" or "image" or "json" or "sql_variant" or "table" or "vector" or "xml" => WhereClauseDataType.Unsupported,
         _ => WhereClauseDataType.Unsupported
     };
 
@@ -92,18 +103,45 @@ public static class WhereClauseFactory
                 new WhereOperatorOption(WhereClauseOperator.GreaterThan, ">", false),
                 new WhereOperatorOption(WhereClauseOperator.LessThanOrEqual, "<=", false),
                 new WhereOperatorOption(WhereClauseOperator.GreaterThanOrEqual, ">=", false),
-                new WhereOperatorOption(WhereClauseOperator.NotEqual, "<>", false)
+                new WhereOperatorOption(WhereClauseOperator.NotEqual, "<>", false),
+                new WhereOperatorOption(WhereClauseOperator.Between, "BETWEEN", true)
             ],
             WhereClauseDataType.String =>
             [
                 new WhereOperatorOption(WhereClauseOperator.Equals, "=", false),
+                new WhereOperatorOption(WhereClauseOperator.NotEqual, "<>", false),
                 new WhereOperatorOption(WhereClauseOperator.Like, "LIKE", false),
                 new WhereOperatorOption(WhereClauseOperator.NotLike, "NOT LIKE", false)
             ],
-            WhereClauseDataType.Date =>
+            WhereClauseDataType.LegacyText =>
+            [
+                new WhereOperatorOption(WhereClauseOperator.Like, "LIKE", false),
+                new WhereOperatorOption(WhereClauseOperator.NotLike, "NOT LIKE", false)
+            ],
+            WhereClauseDataType.Date or
+            WhereClauseDataType.Time or
+            WhereClauseDataType.DateTime or
+            WhereClauseDataType.DateTimeOffset or
+            WhereClauseDataType.Binary or
+            WhereClauseDataType.RowVersion =>
             [
                 new WhereOperatorOption(WhereClauseOperator.Equals, "=", false),
+                new WhereOperatorOption(WhereClauseOperator.NotEqual, "<>", false),
+                new WhereOperatorOption(WhereClauseOperator.LessThan, "<", false),
+                new WhereOperatorOption(WhereClauseOperator.GreaterThan, ">", false),
+                new WhereOperatorOption(WhereClauseOperator.LessThanOrEqual, "<=", false),
+                new WhereOperatorOption(WhereClauseOperator.GreaterThanOrEqual, ">=", false),
                 new WhereOperatorOption(WhereClauseOperator.Between, "BETWEEN", true)
+            ],
+            WhereClauseDataType.Guid or
+            WhereClauseDataType.HierarchyId =>
+            [
+                new WhereOperatorOption(WhereClauseOperator.Equals, "=", false),
+                new WhereOperatorOption(WhereClauseOperator.NotEqual, "<>", false),
+                new WhereOperatorOption(WhereClauseOperator.LessThan, "<", false),
+                new WhereOperatorOption(WhereClauseOperator.GreaterThan, ">", false),
+                new WhereOperatorOption(WhereClauseOperator.LessThanOrEqual, "<=", false),
+                new WhereOperatorOption(WhereClauseOperator.GreaterThanOrEqual, ">=", false)
             ],
             WhereClauseDataType.Bit =>
             [
@@ -353,12 +391,33 @@ public class WhereClauseViewModel : ViewModelBase
         switch (dataType)
         {
             case WhereClauseDataType.Numeric:
-                return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
+                return IsFloatingPointNumeric(column.DataType) ?
+                    double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _) :
+                    decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
             case WhereClauseDataType.Bit:
                 return TryParseBit(value, out _);
             case WhereClauseDataType.Date:
-                return DateOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+                return DatePattern.IsMatch(value) && DateOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+            case WhereClauseDataType.Time:
+                return TimePattern.IsMatch(value) && TimeOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+            case WhereClauseDataType.DateTime:
+                return DateTimePattern.IsMatch(value) && DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+            case WhereClauseDataType.DateTimeOffset:
+                return DateTimeOffsetPattern.IsMatch(value) &&
+                       DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTimeOffset) &&
+                       dateTimeOffset.Offset != TimeSpan.Zero;
+            case WhereClauseDataType.Binary:
+                return IsHexLiteral(value);
+            case WhereClauseDataType.RowVersion:
+                return IsHexLiteral(value, expectedHexDigitCount: 16);
+            case WhereClauseDataType.Guid:
+                return Guid.TryParseExact(value, "D", out _) ||
+                       Guid.TryParseExact(value, "N", out _) ||
+                       Guid.TryParseExact(value, "B", out _);
+            case WhereClauseDataType.HierarchyId:
+                return TryParseHierarchyId(value);
             case WhereClauseDataType.String:
+            case WhereClauseDataType.LegacyText:
                 return true;
             case WhereClauseDataType.Unsupported:
             default:
@@ -369,4 +428,41 @@ public class WhereClauseViewModel : ViewModelBase
     private static bool TryParseBit(string value, out bool parsed) =>
         bool.TryParse(value, out parsed) ||
         (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numeric) && numeric is 0 or 1 && (parsed = numeric == 1));
+
+    private static bool IsFloatingPointNumeric(string dataType) =>
+        string.Equals(dataType, "float", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(dataType, "real", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(dataType, "double", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsHexLiteral(string value, int? expectedHexDigitCount = null)
+    {
+        if (!value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var hexDigits = value[2..];
+        return hexDigits.Length > 0 &&
+               (expectedHexDigitCount is null || hexDigits.Length == expectedHexDigitCount) &&
+               hexDigits.All(Uri.IsHexDigit);
+    }
+
+    private static bool TryParseHierarchyId(string value)
+    {
+        if (value == "/")
+            return true;
+
+        if (!value.StartsWith('/') || !value.EndsWith('/') || value.Contains("//"))
+            return false;
+
+        var labels = value[1..^1].Split('/');
+        return labels.Length > 0 && labels.All(TryParseHierarchyIdLabel);
+    }
+
+    private static bool TryParseHierarchyIdLabel(string label) =>
+        label.Split('.').All(part => HierarchyIdNodePattern.IsMatch(part));
+
+    private static readonly Regex DatePattern = new("^\\d{4}-\\d{2}-\\d{2}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex TimePattern = new("^\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex DateTimePattern = new("^\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?)?$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex DateTimeOffsetPattern = new("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,7})?(?:Z|[+-]\\d{2}:\\d{2})$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex HierarchyIdNodePattern = new("^(?:0|-?[1-9][0-9]*)$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 }
