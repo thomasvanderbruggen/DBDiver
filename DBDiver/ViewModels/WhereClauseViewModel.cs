@@ -71,6 +71,18 @@ public class WhereConnectorOption
     public string DisplayName { get; }
 }
 
+public class WhereGroupOption
+{
+    public WhereGroupOption(int? group)
+    {
+        Group = group;
+        DisplayName = group is null ? "None" : $"Group {group}";
+    }
+
+    public int? Group { get; }
+    public string DisplayName { get; }
+}
+
 public static class WhereClauseFactory
 {
     public static WhereClauseDataType GetDataType(DbColumn column) => column.DataType.ToLowerInvariant() switch
@@ -169,6 +181,7 @@ public class WhereClauseViewModel : ViewModelBase
     private string? _betweenValue;
     private WhereClauseConnector _connector;
     private bool _hasValidationIssue;
+    private WhereGroupOption? _selectedGroup;
 
     public WhereClauseViewModel(
         IReadOnlyList<WhereDropdownOption> columns,
@@ -191,6 +204,8 @@ public class WhereClauseViewModel : ViewModelBase
 
     public ObservableCollection<WhereDropdownOption> Columns { get; }
     public ObservableCollection<WhereOperatorOption> Operators { get; }
+    public IReadOnlyList<WhereGroupOption> GroupOptions { get; } =
+        [new(null), new(1), new(2), new(3), new(4), new(5)];
 
     public WhereDropdownOption? SelectedColumn
     {
@@ -256,6 +271,12 @@ public class WhereClauseViewModel : ViewModelBase
         }
     }
 
+    public WhereGroupOption? SelectedGroup
+    {
+        get => _selectedGroup;
+        set => SetProperty(ref _selectedGroup, value);
+    }
+
     public bool IsAnd
     {
         get => Connector == WhereClauseConnector.And;
@@ -281,6 +302,7 @@ public class WhereClauseViewModel : ViewModelBase
         get => _hasValidationIssue;
         private set => SetProperty(ref _hasValidationIssue, value);
     }
+
 
     public bool IsComplete =>
         SelectedColumn is not null &&
@@ -329,7 +351,8 @@ public class WhereClauseViewModel : ViewModelBase
                 Operator = selectedOperator.Operator,
                 Value = null,
                 BetweenValue = null,
-                Connector = Connector
+                Connector = Connector,
+                Group = SelectedGroup?.Group
             };
 
         if (!ValidateValue(selectedColumnOption.Column, selectedOperator.Operator, Value))
@@ -346,7 +369,8 @@ public class WhereClauseViewModel : ViewModelBase
             Operator = selectedOperator.Operator,
             Value = Value,
             BetweenValue = selectedOperator.UsesBetween ? BetweenValue : null,
-            Connector = Connector
+            Connector = Connector,
+            Group = SelectedGroup?.Group
         };
     }
 

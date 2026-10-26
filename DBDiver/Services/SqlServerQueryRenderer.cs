@@ -57,12 +57,27 @@ public class SqlServerQueryRenderer
         sql.AppendLine();
         sql.Append("WHERE ");
 
+        int? activeGroup = null;
+
         for (var index = 0; index < clauses.Count; index++)
         {
+            var clause = clauses[index];
+
+            if (activeGroup is not null && clause.Group != activeGroup)
+            {
+                sql.Append(')');
+                activeGroup = null;
+            }
+
             if (index > 0)
                 sql.Append(clauses[index].Connector == WhereClauseConnector.Or ? " OR " : " AND ");
 
-            var clause = clauses[index];
+            if (clause.Group is not null && activeGroup is null)
+            {
+                sql.Append('(');
+                activeGroup = clause.Group;
+            }
+
             AppendColumn(sql, clause.Table.Alias, clause.Column);
 
             switch (clause.Operator)
@@ -112,6 +127,9 @@ public class SqlServerQueryRenderer
                     break;
                 }
             }
+
+            if (activeGroup is not null && index == clauses.Count - 1)
+                sql.Append(')');
         }
     }
 

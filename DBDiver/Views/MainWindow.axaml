@@ -196,18 +196,28 @@
                                                 Background="{DynamicResource SidebarItemBackgroundBrush}"
                                                 BorderBrush="{DynamicResource SidebarItemBorderBrush}"
                                                 BorderThickness="1" CornerRadius="5" Padding="8,5">
-                                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                                <TextBlock Text="Connector" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource SidebarTextBrush}" />
-                                                <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
-                                                             Content="AND" IsChecked="{Binding IsAnd, Mode=TwoWay}" />
-                                                <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
-                                                             Content="OR" IsChecked="{Binding IsOr, Mode=TwoWay}" />
+                                            <StackPanel Spacing="6">
+                                                <Grid ColumnDefinitions="Auto,Auto">
+                                                    <TextBlock Text="Connector" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource SidebarTextBrush}" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                                        <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
+                                                                     Content="AND" IsChecked="{Binding IsAnd, Mode=TwoWay}" />
+                                                        <RadioButton GroupName="{Binding Index, StringFormat='WhereConnector{0}'}"
+                                                                     Content="OR" IsChecked="{Binding IsOr, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                </Grid>
                                             </StackPanel>
                                         </Border>
                                         <Border Grid.Row="1" Background="{DynamicResource SidebarItemBackgroundBrush}" BorderBrush="{DynamicResource SidebarItemBorderBrush}" BorderThickness="1"
                                                 CornerRadius="5" Padding="8">
                                         <StackPanel Spacing="6">
+                                            <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
+                                                <TextBlock Grid.Row="0" Text="Group" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
+                                                <ComboBox Grid.Row="1" Margin="0,4,0,0" ItemsSource="{Binding GroupOptions}"
+                                                          SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
+                                                          DisplayMemberBinding="{Binding DisplayName}" />
+                                            </Grid>
                                             <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,4">
                                                 <TextBlock Grid.Column="0" Text="Column" FontWeight="SemiBold" Foreground="{DynamicResource SidebarTextBrush}" />
                                                 <ComboBox Grid.Row="1" Margin="0,4,0,0" ItemsSource="{Binding Columns}"

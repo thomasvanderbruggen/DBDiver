@@ -67,6 +67,7 @@ public class QueryWhereClause
     public string? Value { get; init; }
     public string? BetweenValue { get; init; }
     public WhereClauseConnector Connector { get; init; }
+    public int? Group { get; init; }
 }
 
 public class QueryTable

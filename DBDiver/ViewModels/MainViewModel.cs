@@ -977,6 +977,9 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
 
         query.ClearWhereClauses();
         var hasIncompleteClause = false;
+        var hasInvalidGrouping = false;
+        var previousGroup = (int?)null;
+        var seenGroups = new HashSet<int>();
 
         foreach (var clauseViewModel in WhereClauses)
         {
@@ -984,10 +987,38 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
             {
                 if (clauseViewModel.SelectedColumn is not null && clauseViewModel.SelectedOperator is not null)
                     hasIncompleteClause = true;
+
                 continue;
             }
 
+            if (clause.Group is { } group)
+            {
+                if (group != previousGroup && !seenGroups.Add(group))
+                {
+                    hasInvalidGrouping = true;
+                    break;
+                }
+
+                previousGroup = group;
+            }
+            else
+            {
+                previousGroup = null;
+            }
+
             query.AddWhereClause(clause);
+        }
+
+        if (hasInvalidGrouping)
+        {
+            StatusText = "Query could not be finished because the same WHERE clause group is used in more than one place.";
+            return;
+        }
+
+        if (query.WhereClauses.Count == 0 && WhereClauses.Count > 0 && !hasIncompleteClause)
+        {
+            StatusText = "Query could not be finished because no WHERE clauses are valid.";
+            return;
         }
 
         GeneratedSql = _queryRenderer.Render(query);
