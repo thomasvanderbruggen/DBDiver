@@ -58,7 +58,12 @@ public class QueryParameter
     public object Value { get; }
 }
 
-public class QueryWhereClause
+public abstract class WhereClauseNode
+{
+    public WhereClauseConnector Connector { get; init; }
+}
+
+public sealed class QueryWhereClause : WhereClauseNode
 {
     public required QueryTable Table { get; init; }
     public required string Column { get; init; }
@@ -66,8 +71,11 @@ public class QueryWhereClause
     public required WhereClauseOperator Operator { get; init; }
     public string? Value { get; init; }
     public string? BetweenValue { get; init; }
-    public WhereClauseConnector Connector { get; init; }
-    public int? Group { get; init; }
+}
+
+public sealed class QueryWhereGroup : WhereClauseNode
+{
+    public required IReadOnlyList<WhereClauseNode> Children { get; init; }
 }
 
 public class QueryTable
@@ -92,11 +100,11 @@ public class QueryModel
 {
     private readonly List<QueryTable> _tables = [];
     private readonly List<QueryJoin> _joins = [];
-    private readonly List<QueryWhereClause> _whereClauses = [];
+    private readonly List<WhereClauseNode> _whereClauses = [];
 
     public IReadOnlyList<QueryTable> Tables => _tables;
     public IReadOnlyList<QueryJoin> Joins => _joins;
-    public IReadOnlyList<QueryWhereClause> WhereClauses => _whereClauses;
+    public IReadOnlyList<WhereClauseNode> WhereClauses => _whereClauses;
 
     public void AddTable(QueryTable table)
     {
@@ -108,7 +116,7 @@ public class QueryModel
         _joins.Add(join);
     }
 
-    public void AddWhereClause(QueryWhereClause clause)
+    public void AddWhereClause(WhereClauseNode clause)
     {
         _whereClauses.Add(clause);
     }

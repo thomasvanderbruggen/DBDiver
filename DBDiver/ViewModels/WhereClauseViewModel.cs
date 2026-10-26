@@ -71,18 +71,6 @@ public class WhereConnectorOption
     public string DisplayName { get; }
 }
 
-public class WhereGroupOption
-{
-    public WhereGroupOption(int? group)
-    {
-        Group = group;
-        DisplayName = group is null ? "None" : $"Group {group}";
-    }
-
-    public int? Group { get; }
-    public string DisplayName { get; }
-}
-
 public static class WhereClauseFactory
 {
     public static WhereClauseDataType GetDataType(DbColumn column) => column.DataType.ToLowerInvariant() switch
@@ -181,7 +169,15 @@ public class WhereClauseViewModel : ViewModelBase
     private string? _betweenValue;
     private WhereClauseConnector _connector;
     private bool _hasValidationIssue;
-    private WhereGroupOption? _selectedGroup;
+    private bool _isDropTarget;
+
+    public event Action? ValidationIssueChanged;
+
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set => SetProperty(ref _isDropTarget, value);
+    }
 
     public WhereClauseViewModel(
         IReadOnlyList<WhereDropdownOption> columns,
@@ -204,9 +200,6 @@ public class WhereClauseViewModel : ViewModelBase
 
     public ObservableCollection<WhereDropdownOption> Columns { get; }
     public ObservableCollection<WhereOperatorOption> Operators { get; }
-    public IReadOnlyList<WhereGroupOption> GroupOptions { get; } =
-        [new(null), new(1), new(2), new(3), new(4), new(5)];
-
     public WhereDropdownOption? SelectedColumn
     {
         get => _selectedColumn;
@@ -271,11 +264,7 @@ public class WhereClauseViewModel : ViewModelBase
         }
     }
 
-    public WhereGroupOption? SelectedGroup
-    {
-        get => _selectedGroup;
-        set => SetProperty(ref _selectedGroup, value);
-    }
+    public IReadOnlyList<object> Children { get; } = [];
 
     public bool IsAnd
     {
@@ -351,8 +340,7 @@ public class WhereClauseViewModel : ViewModelBase
                 Operator = selectedOperator.Operator,
                 Value = null,
                 BetweenValue = null,
-                Connector = Connector,
-                Group = SelectedGroup?.Group
+                Connector = Connector
             };
 
         if (!ValidateValue(selectedColumnOption.Column, selectedOperator.Operator, Value))
@@ -369,8 +357,7 @@ public class WhereClauseViewModel : ViewModelBase
             Operator = selectedOperator.Operator,
             Value = Value,
             BetweenValue = selectedOperator.UsesBetween ? BetweenValue : null,
-            Connector = Connector,
-            Group = SelectedGroup?.Group
+            Connector = Connector
         };
     }
 
@@ -396,10 +383,15 @@ public class WhereClauseViewModel : ViewModelBase
 
     private void UpdateValidationIssue()
     {
+        var wasInvalid = HasValidationIssue;
+
         HasValidationIssue = SelectedColumn is not null &&
                              SelectedOperator is not null &&
                              SelectedOperator.Operator is not (WhereClauseOperator.IsNull or WhereClauseOperator.IsNotNull) &&
-                             string.IsNullOrWhiteSpace(Value);
+                             Value is not { Length: > 0 };
+
+        if (wasInvalid != HasValidationIssue)
+            ValidationIssueChanged?.Invoke();
     }
 
     private bool ValidateValue(DbColumn column, WhereClauseOperator @operator, string? value)
@@ -442,7 +434,7 @@ public class WhereClauseViewModel : ViewModelBase
                 return TryParseHierarchyId(value);
             case WhereClauseDataType.String:
             case WhereClauseDataType.LegacyText:
-                return true;
+                return value is { Length: > 0 };
             case WhereClauseDataType.Unsupported:
             default:
                 return false;

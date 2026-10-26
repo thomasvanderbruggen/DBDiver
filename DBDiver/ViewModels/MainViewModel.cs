@@ -65,12 +65,8 @@ public class MainViewModel : ViewModelBase
                 BeginCustomJoin(graphNode);
         });
         CancelCustomJoinCommand = new RelayCommand(_ => CancelCustomJoin());
-        AddWhereClauseCommand = new RelayCommand(_ => AddWhereClause());
-        RemoveWhereClauseCommand = new RelayCommand(parameter =>
-        {
-            if (parameter is WhereClauseViewModel clause)
-                RemoveWhereClause(clause);
-        });
+        AddWhereClauseCommand = WhereClauses.AddConditionCommand;
+        RemoveWhereClauseCommand = WhereClauses.DeleteCommand;
         _settingsApplyTimer.Tick += (_, _) => ApplyPendingSettings();
     }
 
@@ -79,7 +75,7 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<GraphNode> GraphNodes { get; } = [];
     public ObservableCollection<GraphEdge> GraphEdges { get; } = [];
     public ObservableCollection<DbTable> IsolatedTables { get; } = [];
-    public ObservableCollection<WhereClauseViewModel> WhereClauses { get; } = [];
+    public WhereClauseTreeViewModel WhereClauses { get; } = new(() => []);
     public Dictionary<string, GraphNode> NodeIndex { get; } = new(StringComparer.OrdinalIgnoreCase);
     public event Action? GraphLayoutCompleted;
     public event Action<GraphNode>? SelectionChanged;
@@ -370,32 +366,7 @@ public class MainViewModel : ViewModelBase
     public ICommand AddWhereClauseCommand { get; }
     public ICommand RemoveWhereClauseCommand { get; }
 
-    private void AddWhereClause()
-    {
-        if (_activeQuery is null)
-            return;
-
-        var connector = WhereClauses.Count == 0
-            ? WhereClauseConnector.And
-            : WhereClauses[^1].Connector;
-        WhereClauses.Add(new WhereClauseViewModel(GetActiveQueryColumns(_activeQuery), connector, WhereClauses.Count));
-        OnPropertyChanged(nameof(WhereClauses));
-    }
-
-    private void RemoveWhereClause(WhereClauseViewModel clause)
-    {
-        if (!WhereClauses.Remove(clause))
-            return;
-
-        RefreshWhereClauseIndexes();
-        OnPropertyChanged(nameof(WhereClauses));
-    }
-
-    private void RefreshWhereClauseIndexes()
-    {
-        for (var index = 0; index < WhereClauses.Count; index++)
-            WhereClauses[index].RefreshIndexes(index);
-    }
+    private void AddWhereClause() => WhereClauses.AddCondition();
 
     private void ZoomIn() => ZoomRequested?.Invoke(true);
     private void ZoomOut() => ZoomRequested?.Invoke(false);
@@ -695,19 +666,15 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
     {
         if (_activeQuery is not { } query || _currentSchema is null)
         {
-            WhereClauses.Clear();
-            OnPropertyChanged(nameof(WhereClauses));
             return;
         }
 
         var columns = GetActiveQueryColumns(query);
 
-        foreach (var clause in WhereClauses)
-            clause.UpdateColumns(columns);
+        WhereClauses.RefreshColumns(columns);
 
-        if (WhereClauses.Count == 0)
-            WhereClauses.Add(new WhereClauseViewModel(columns, WhereClauseConnector.And, 0));
-        OnPropertyChanged(nameof(WhereClauses));
+        if (WhereClauses.Conditions.Count == 0)
+            WhereClauses.AddCondition();
     }
 
     private List<WhereDropdownOption> GetActiveQueryColumns(QueryModel query)
@@ -976,46 +943,22 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
             return;
 
         query.ClearWhereClauses();
-        var hasIncompleteClause = false;
-        var hasInvalidGrouping = false;
-        var previousGroup = (int?)null;
-        var seenGroups = new HashSet<int>();
+        var hasInvalidItems = WhereClauses.HasInvalidItems || WhereClauses.RootItems.OfType<WhereClauseGroupViewModel>().Any(group => group.HasEmptyChildren);
 
-        foreach (var clauseViewModel in WhereClauses)
+        if (hasInvalidItems)
         {
-            if (clauseViewModel.BuildClause() is not { } clause)
-            {
-                if (clauseViewModel.SelectedColumn is not null && clauseViewModel.SelectedOperator is not null)
-                    hasIncompleteClause = true;
-
-                continue;
-            }
-
-            if (clause.Group is { } group)
-            {
-                if (group != previousGroup && !seenGroups.Add(group))
-                {
-                    hasInvalidGrouping = true;
-                    break;
-                }
-
-                previousGroup = group;
-            }
-            else
-            {
-                previousGroup = null;
-            }
-
-            query.AddWhereClause(clause);
-        }
-
-        if (hasInvalidGrouping)
-        {
-            StatusText = "Query could not be finished because the same WHERE clause group is used in more than one place.";
+            WhereClauses.BuildValidationState();
+            StatusText = "Query could not be finished because the WHERE clause builder contains invalid or empty items.";
             return;
         }
 
-        if (query.WhereClauses.Count == 0 && WhereClauses.Count > 0 && !hasIncompleteClause)
+        foreach (var clause in WhereClauses.Conditions)
+        {
+            if (clause.BuildClause() is { } builtClause)
+                query.AddWhereClause(builtClause);
+        }
+
+        if (query.WhereClauses.Count == 0 && WhereClauses.Conditions.Count > 0)
         {
             StatusText = "Query could not be finished because no WHERE clauses are valid.";
             return;
@@ -1023,9 +966,7 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
 
         GeneratedSql = _queryRenderer.Render(query);
         _ = _queryRenderer.Render(query, out var parameters);
-        StatusText = hasIncompleteClause
-            ? "Query finished, but incomplete WHERE clauses were not included."
-            : "Query finished. Copy the SQL, then reset to build another query.";
+        StatusText = "Query finished. Copy the SQL, then reset to build another query.";
         UpdateFinishedQueryEmphasis();
 
         Log.Information("Finished query with {TableCount} tables, {JoinCount} joins, {WhereClauseCount} WHERE clauses, and {ParameterCount} parameters",

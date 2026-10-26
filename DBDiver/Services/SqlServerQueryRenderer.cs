@@ -47,7 +47,7 @@ public class SqlServerQueryRenderer
 
     private static void AppendWhereClauses(
         StringBuilder sql,
-        IReadOnlyList<QueryWhereClause> clauses,
+        IReadOnlyList<WhereClauseNode> clauses,
         List<QueryParameter> parameters,
         bool useParameters)
     {
@@ -57,79 +57,86 @@ public class SqlServerQueryRenderer
         sql.AppendLine();
         sql.Append("WHERE ");
 
-        int? activeGroup = null;
-
         for (var index = 0; index < clauses.Count; index++)
         {
-            var clause = clauses[index];
-
-            if (activeGroup is not null && clause.Group != activeGroup)
-            {
-                sql.Append(')');
-                activeGroup = null;
-            }
-
             if (index > 0)
                 sql.Append(clauses[index].Connector == WhereClauseConnector.Or ? " OR " : " AND ");
 
-            if (clause.Group is not null && activeGroup is null)
-            {
+            AppendWhereNode(sql, clauses[index], parameters, useParameters);
+        }
+    }
+
+    private static void AppendWhereNode(
+        StringBuilder sql,
+        WhereClauseNode node,
+        List<QueryParameter> parameters,
+        bool useParameters)
+    {
+        switch (node)
+        {
+            case QueryWhereGroup group:
                 sql.Append('(');
-                activeGroup = clause.Group;
-            }
-
-            AppendColumn(sql, clause.Table.Alias, clause.Column);
-
-            switch (clause.Operator)
-            {
-                case WhereClauseOperator.IsNull:
-                    sql.Append(" IS NULL");
-                    break;
-                case WhereClauseOperator.IsNotNull:
-                    sql.Append(" IS NOT NULL");
-                    break;
-                case WhereClauseOperator.Between:
+                for (var index = 0; index < group.Children.Count; index++)
                 {
-                    if (useParameters)
-                    {
-                        var startName = GetParameterName(parameters.Count);
-                        parameters.Add(new QueryParameter(startName, clause.Value ?? string.Empty));
-                        var endName = GetParameterName(parameters.Count);
-                        parameters.Add(new QueryParameter(endName, clause.BetweenValue ?? string.Empty));
-                        sql.Append($" BETWEEN {startName} AND {endName}");
-                    }
-                    else
-                    {
-                        sql.Append(" BETWEEN ")
-                           .Append(GetSqlValue(clause.Value, clause.DataType))
-                           .Append(" AND ")
-                           .Append(GetSqlValue(clause.BetweenValue, clause.DataType));
-                    }
+                    if (index > 0)
+                        sql.Append(group.Children[index].Connector == WhereClauseConnector.Or ? " OR " : " AND ");
 
-                    break;
+                    AppendWhereNode(sql, group.Children[index], parameters, useParameters);
                 }
-                default:
-                {
-                    if (useParameters)
-                    {
-                        var parameterName = GetParameterName(parameters.Count);
-                        parameters.Add(new QueryParameter(parameterName, clause.Value ?? string.Empty));
-                        sql.Append(' ').Append(GetOperator(clause.Operator)).Append(' ').Append(parameterName);
-                    }
-                    else
-                    {
-                        sql.Append(' ')
-                           .Append(GetOperator(clause.Operator))
-                           .Append(' ')
-                           .Append(GetSqlValue(clause.Value, clause.DataType));
-                    }
-
-                    break;
-                }
-            }
-
-            if (activeGroup is not null && index == clauses.Count - 1)
                 sql.Append(')');
+                break;
+
+            case QueryWhereClause clause:
+                AppendColumn(sql, clause.Table.Alias, clause.Column);
+                switch (clause.Operator)
+                {
+                    case WhereClauseOperator.IsNull:
+                        sql.Append(" IS NULL");
+                        break;
+                    case WhereClauseOperator.IsNotNull:
+                        sql.Append(" IS NOT NULL");
+                        break;
+                    case WhereClauseOperator.Between:
+                    {
+                        if (useParameters)
+                        {
+                            var startName = GetParameterName(parameters.Count);
+                            parameters.Add(new QueryParameter(startName, clause.Value ?? string.Empty));
+                            var endName = GetParameterName(parameters.Count);
+                            parameters.Add(new QueryParameter(endName, clause.BetweenValue ?? string.Empty));
+                            sql.Append($" BETWEEN {startName} AND {endName}");
+                        }
+                        else
+                        {
+                            sql.Append(" BETWEEN ")
+                               .Append(GetSqlValue(clause.Value, clause.DataType))
+                               .Append(" AND ")
+                               .Append(GetSqlValue(clause.BetweenValue, clause.DataType));
+                        }
+
+                        break;
+                    }
+                    default:
+                    {
+                        if (useParameters)
+                        {
+                            var parameterName = GetParameterName(parameters.Count);
+                            parameters.Add(new QueryParameter(parameterName, clause.Value ?? string.Empty));
+                            sql.Append(' ').Append(GetOperator(clause.Operator)).Append(' ').Append(parameterName);
+                        }
+                        else
+                        {
+                            sql.Append(' ')
+                               .Append(GetOperator(clause.Operator))
+                               .Append(' ')
+                               .Append(GetSqlValue(clause.Value, clause.DataType));
+                        }
+
+                        break;
+                    }
+                }
+
+                break;
         }
     }
 
