@@ -44,11 +44,13 @@ Download the application from the releases page and run! The application provide
     - Viewport controls
         - Zoom in, fit-to-screen, zoom out, reset view. 
         - Change hop count to alter how many tables the UI will traverse to show nearby tables
+5. WHERE Clause Building 
+   - Build out WHERE Clauses using a drag-and-drop UI. 
+   - Supports grouping conditions and nested groups
 
 ## 🗺️ Feature Roadmap
-1. WHERE Clause building
-2. Add direct database connections
-3. UNION and subquery support 
+1. Add direct database connections
+2. UNION and subquery support 
 
 
 ## 📝 License 
