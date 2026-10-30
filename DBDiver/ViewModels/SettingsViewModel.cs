@@ -23,6 +23,25 @@ public class SettingsViewModel : ViewModelBase
     public GraphLayoutSettings Layout => _settings.Layout;
     public QueryBuilderSettings QueryBuilder => _settings.QueryBuilder;
 
+    public IReadOnlyList<string> ThemeNames => ColorSchemeService.Schemes.Select(scheme => scheme.Name).ToList();
+
+    public string SelectedTheme
+    {
+        get => _settings.ThemeName;
+        set
+        {
+            if (_settings.ThemeName == value)
+                return;
+
+            _settings.ThemeName = value;
+            _settings.Theme = ColorSchemeService.CreateTheme(value);
+            ColorSchemeService.ApplyThemeVariant(value);
+            OnPropertyChanged(nameof(Theme));
+            OnPropertyChanged();
+            MarkDirty();
+        }
+    }
+
     public bool IsDirty
     {
         get => _isDirty;
@@ -47,7 +66,10 @@ public class SettingsViewModel : ViewModelBase
 
     public void ResetTheme()
     {
-        _settings.Theme = new GraphThemeSettings();
+        _settings.ThemeName = ColorSchemeService.DefaultSchemeName;
+        _settings.Theme = ColorSchemeService.CreateTheme(_settings.ThemeName);
+        OnPropertyChanged(nameof(Theme));
+        OnPropertyChanged(nameof(SelectedTheme));
         OnPropertyChanged(nameof(Theme));
         MarkDirty();
     }

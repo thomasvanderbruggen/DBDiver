@@ -27,6 +27,12 @@ public partial class SettingsOverlay : UserControl
             .Select(property => property.Name)
             .ToList();
         LayoutTabControl.SelectionChanged += OnLayoutTabSelected;
+        ThemeNameComboBox.SelectionChanged += (_, _) =>
+        {
+            if (ThemeNameComboBox.SelectedItem is string themeName && _viewModel.SelectedTheme != themeName)
+                _viewModel.SelectedTheme = themeName;
+            BuildThemeEditor();
+        };
         if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" })
             BuildThemeEditor();
         if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" })
@@ -48,6 +54,7 @@ public partial class SettingsOverlay : UserControl
 
     private void BuildThemeEditor()
     {
+        ThemeNameComboBox.SelectedItem = _viewModel.SelectedTheme;
         var properties = typeof(GraphThemeSettings).GetProperties()
             .Where(property => property.PropertyType == typeof(string))
             .Select(property => property.Name)
@@ -59,7 +66,7 @@ public partial class SettingsOverlay : UserControl
             var panel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Tag = name };
             var label = new TextBlock { Text = name, Width = 240, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
             var current = (string?)typeof(GraphThemeSettings).GetProperty(name)?.GetValue(_viewModel.Theme);
-            var input = new TextBox { Width = 120, Text = current };
+        var input = new TextBox { Width = 120, Text = current, Foreground = GetSettingsInputTextBrush() };
             var preview = new Border
             {
                 Width = 24,
@@ -189,9 +196,17 @@ public partial class SettingsOverlay : UserControl
 
         var colorProperties = new[]
         {
+            nameof(QueryBuilderSettings.InnerColor),
+            nameof(QueryBuilderSettings.LeftColor),
+            nameof(QueryBuilderSettings.RightColor),
+            nameof(QueryBuilderSettings.FullColor),
+            nameof(QueryBuilderSettings.WhereTableHeaderColor),
+            nameof(QueryBuilderSettings.AddClauseButtonColor),
             nameof(QueryBuilderSettings.GroupDepth1Color),
             nameof(QueryBuilderSettings.GroupDepth2Color),
-            nameof(QueryBuilderSettings.GroupDepth3Color)
+            nameof(QueryBuilderSettings.GroupDepth3Color),
+            nameof(QueryBuilderSettings.ValidationIssueBorderColor),
+            nameof(QueryBuilderSettings.WhereTableHeaderBackgroundColor)
         };
         foreach (var propertyName in colorProperties)
         {
@@ -200,9 +215,14 @@ public partial class SettingsOverlay : UserControl
             {
                 Text = propertyName switch
                 {
+                    nameof(QueryBuilderSettings.WhereTableHeaderColor) => "Where Table Header Color",
+                    nameof(QueryBuilderSettings.AddClauseButtonColor) => "Add Clause Button Color",
                     nameof(QueryBuilderSettings.GroupDepth1Color) => "Group Level 1 Color",
                     nameof(QueryBuilderSettings.GroupDepth2Color) => "Group Level 2 Color",
-                    _ => "Group Level 3 Color"
+                    nameof(QueryBuilderSettings.GroupDepth3Color) => "Group Level 3 Color",
+                    nameof(QueryBuilderSettings.ValidationIssueBorderColor) => "Validation Issue Border Color",
+                    nameof(QueryBuilderSettings.WhereTableHeaderBackgroundColor) => "Where Table Header Background",
+                    _ => propertyName.Replace("Color", " Join Color")
                 },
                 Width = 200,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
@@ -294,6 +314,12 @@ public partial class SettingsOverlay : UserControl
         return Avalonia.Media.Color.TryParse(colorValue ?? string.Empty, out Avalonia.Media.Color color)
             ? new Avalonia.Media.SolidColorBrush(color)
             : null;
+    }
+
+    private static Avalonia.Media.IBrush GetSettingsInputTextBrush()
+    {
+        return Avalonia.Application.Current?.Resources["SettingsInputTextBrush"] as Avalonia.Media.IBrush
+            ?? Avalonia.Media.Brushes.White;
     }
 
     private static string GetLayoutDescription(string propertyName) => propertyName switch

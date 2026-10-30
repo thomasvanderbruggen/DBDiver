@@ -50,6 +50,7 @@ public class MainViewModel : ViewModelBase
     {
         _schemaService = schemaService;
         _appSettings = _settingsService.Load();
+        ColorSchemeService.ApplyThemeVariant(_appSettings.ThemeName);
         CopySchemaCommand = new RelayCommand(_ => CopySchemaCommandToClipboard());
         LoadSchemaCommand = new RelayCommand(_ => LoadSchemaFromFile());
         SaveSchemaCommand = new RelayCommand(_ => SaveSchemaToFile());
@@ -632,6 +633,9 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         SetBrush("SidebarItemTextBrush", theme.SidebarItemText);
         SetBrush("MinimapBackgroundBrush", theme.MinimapBackground);
         SetBrush("MinimapBorderBrush", theme.MinimapBorder);
+        SetBrush("SettingsTextBrush", theme.SettingsText);
+        SetBrush("SettingsInputTextBrush", theme.SettingsInputText);
+        SetBrush("SettingsButtonTextBrush", theme.SettingsButtonText);
     }
 
     private void ApplyQueryBuilderColors(QueryBuilderSettings settings)
@@ -645,6 +649,8 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         SetBrush("QueryBuilderGroupDepth1Brush", settings.GroupDepth1Color);
         SetBrush("QueryBuilderGroupDepth2Brush", settings.GroupDepth2Color);
         SetBrush("QueryBuilderGroupDepth3Brush", settings.GroupDepth3Color);
+        SetBrush("QueryBuilderValidationIssueBorderBrush", settings.ValidationIssueBorderColor);
+        SetBrush("QueryBuilderWhereTableHeaderBackgroundBrush", settings.WhereTableHeaderBackgroundColor);
         WhereClauses.RefreshGroupDepthBrushes();
     }
 

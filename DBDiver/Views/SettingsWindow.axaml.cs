@@ -23,6 +23,12 @@ public partial class SettingsWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         BuildThemeEditor();
+        ThemeNameComboBox.SelectionChanged += (_, _) =>
+        {
+            if (ThemeNameComboBox.SelectedItem is string themeName && _viewModel.SelectedTheme != themeName)
+                _viewModel.SelectedTheme = themeName;
+            BuildThemeEditor();
+        };
         AttachedToVisualTree += (_, _) => Serilog.Log.Information("[SettingsTiming] Settings window AttachedToVisualTree fired");
         DetachedFromVisualTree += (_, _) => Serilog.Log.Information("[SettingsTiming] Settings window DetachedFromVisualTree fired");
         LayoutTabControl.SelectionChanged += OnLayoutTabSelected;
@@ -52,6 +58,7 @@ public partial class SettingsWindow : Window
 
     private void BuildThemeEditor()
     {
+        ThemeNameComboBox.SelectedItem = _viewModel.SelectedTheme;
         var buildStopwatch = Stopwatch.StartNew();
         var properties = typeof(GraphThemeSettings).GetProperties()
             .Where(property => property.PropertyType == typeof(string))
@@ -64,7 +71,7 @@ public partial class SettingsWindow : Window
             var panel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Tag = name };
             var label = new TextBlock { Text = name, Width = 240, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
             var current = (string?)typeof(GraphThemeSettings).GetProperty(name)?.GetValue(_viewModel.Theme);
-            var input = new TextBox { Width = 120, Text = current };
+            var input = new TextBox { Width = 120, Text = current, Foreground = GetSettingsInputTextBrush() };
             var preview = new Border
             {
                 Width = 24,
@@ -217,7 +224,9 @@ public partial class SettingsWindow : Window
             nameof(QueryBuilderSettings.AddClauseButtonColor),
             nameof(QueryBuilderSettings.GroupDepth1Color),
             nameof(QueryBuilderSettings.GroupDepth2Color),
-            nameof(QueryBuilderSettings.GroupDepth3Color)
+            nameof(QueryBuilderSettings.GroupDepth3Color),
+            nameof(QueryBuilderSettings.ValidationIssueBorderColor),
+            nameof(QueryBuilderSettings.WhereTableHeaderBackgroundColor)
         };
         foreach (var propertyName in colorProperties)
         {
@@ -231,6 +240,8 @@ public partial class SettingsWindow : Window
                     nameof(QueryBuilderSettings.GroupDepth1Color) => "Group Level 1 Color",
                     nameof(QueryBuilderSettings.GroupDepth2Color) => "Group Level 2 Color",
                     nameof(QueryBuilderSettings.GroupDepth3Color) => "Group Level 3 Color",
+                    nameof(QueryBuilderSettings.ValidationIssueBorderColor) => "Validation Issue Border Color",
+                    nameof(QueryBuilderSettings.WhereTableHeaderBackgroundColor) => "Where Table Header Background",
                     _ => propertyName.Replace("Color", " Join Color")
                 },
                 Width = 200,
@@ -238,7 +249,7 @@ public partial class SettingsWindow : Window
             });
 
             var current = (string?)typeof(QueryBuilderSettings).GetProperty(propertyName)?.GetValue(_viewModel.QueryBuilder);
-            var input = new TextBox { Width = 120, Text = current };
+            var input = new TextBox { Width = 120, Text = current, Foreground = GetSettingsInputTextBrush() };
             var preview = new Border
             {
                 Width = 24,
@@ -354,6 +365,12 @@ public partial class SettingsWindow : Window
         return Avalonia.Media.Color.TryParse(colorValue ?? string.Empty, out Avalonia.Media.Color color)
             ? new Avalonia.Media.SolidColorBrush(color)
             : null;
+    }
+
+    private static Avalonia.Media.IBrush GetSettingsInputTextBrush()
+    {
+        return Avalonia.Application.Current?.Resources["SettingsInputTextBrush"] as Avalonia.Media.IBrush
+            ?? Avalonia.Media.Brushes.White;
     }
 
     private static string GetLayoutDescription(string propertyName) => propertyName switch

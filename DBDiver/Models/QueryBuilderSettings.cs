@@ -19,6 +19,8 @@ public class QueryBuilderSettings
     public string GroupDepth1Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth1Brush");
     public string GroupDepth2Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth2Brush");
     public string GroupDepth3Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth3Brush");
+    public string ValidationIssueBorderColor { get; set; } = GetResourceColor("QueryBuilderValidationIssueBorderBrush");
+    public string WhereTableHeaderBackgroundColor { get; set; } = GetResourceColor("QueryBuilderWhereTableHeaderBackgroundBrush");
 
     public string InnerColor { get; set; } = GetResourceColor("QueryBuilderInnerJoinColorBrush");
     public string LeftColor { get; set; } = GetResourceColor("QueryBuilderLeftJoinColorBrush");

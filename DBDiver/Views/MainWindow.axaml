@@ -106,31 +106,31 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Bottom"
                         Margin="10,0,0,10"
-                        Background="#CC0F172A"
-                        BorderBrush="#334155"
+                        Background="{DynamicResource OverlayBackgroundBrush}"
+                        BorderBrush="{DynamicResource GraphNodeBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="10,8">
                     <StackPanel Spacing="4">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Rectangle Width="18" Height="3" Fill="{DynamicResource GraphEdgeHighlightStrokeBrush}" VerticalAlignment="Center" Opacity="0.65" />
-                            <TextBlock Text="Nearby" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" Opacity="0.85" />
+                            <TextBlock Text="Nearby" FontSize="11" Foreground="{DynamicResource ToolbarTextBrush}" VerticalAlignment="Center" Opacity="0.85" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderLeftJoinColorBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="LEFT" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                            <TextBlock Text="LEFT" FontSize="11" Foreground="{DynamicResource ToolbarTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderInnerJoinColorBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="INNER" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                            <TextBlock Text="INNER" FontSize="11" Foreground="{DynamicResource ToolbarTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderRightJoinColorBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="RIGHT" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                            <TextBlock Text="RIGHT" FontSize="11" Foreground="{DynamicResource ToolbarTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Rectangle Width="18" Height="3" Fill="{DynamicResource QueryBuilderFullJoinColorBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="FULL" FontSize="11" Foreground="#E2E8F0" VerticalAlignment="Center" />
+                            <TextBlock Text="FULL" FontSize="11" Foreground="{DynamicResource ToolbarTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -166,7 +166,7 @@
                     CornerRadius="6" Padding="10">
                 <Grid>
                 <Grid IsVisible="{Binding !IsQueryBuilding}" Width="260" RowDefinitions="Auto,*,Auto">
-                    <TextBlock Grid.Row="0" Text="Isolated Tables" FontWeight="SemiBold" Foreground="#E2E8F0" />
+                    <TextBlock Grid.Row="0" Text="Isolated Tables" FontWeight="SemiBold" Foreground="{DynamicResource SidebarHeadingTextBrush}" />
                     <ScrollViewer Grid.Row="1" Margin="0,8,0,0">
                         <ItemsControl ItemsSource="{Binding IsolatedTables}">
                             <ItemsControl.ItemTemplate>
@@ -185,7 +185,7 @@
                 </Grid>
 
                 <Grid IsVisible="{Binding IsQueryBuilding}" Width="380" RowDefinitions="Auto,*,Auto,Auto">
-                    <TextBlock Grid.Row="0" Text="WHERE Clause Builder" FontWeight="SemiBold" Foreground="#E2E8F0" />
+                    <TextBlock Grid.Row="0" Text="WHERE Clause Builder" FontWeight="SemiBold" Foreground="{DynamicResource SidebarHeadingTextBrush}" />
                     <ScrollViewer Grid.Row="1" Margin="0,8,0,8">
                         <StackPanel>
                         <TreeView x:Name="WhereClauseTreeView" ItemsSource="{Binding WhereClauses.RootItems}">
@@ -317,8 +317,8 @@
                  HorizontalAlignment="Center"
                  VerticalAlignment="Top"
                  Margin="0,60,0,0"
-                 Background="#0F172A"
-                 BorderBrush="#334155"
+                 Background="{DynamicResource AppBackgroundBrush}"
+                 BorderBrush="{DynamicResource GraphNodeBorderBrush}"
                  BorderThickness="1"
                  CornerRadius="8"
                  Padding="16"
@@ -345,74 +345,35 @@
         </Border>
 
         <Border x:Name="SettingsOverlayHost" Grid.Row="0" Grid.RowSpan="4" IsVisible="False"
-                Background="#CC0F172A" Padding="60">
-            <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+                Background="{DynamicResource OverlayBackgroundBrush}" Padding="60">
+            <Border Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource GraphNodeBorderBrush}" BorderThickness="1"
                 CornerRadius="10" Width="680" Height="580">
                 <ContentControl x:Name="SettingsOverlayPresenter" />
             </Border>
         </Border>
 
         <Border x:Name="WelcomeGuideHost" Grid.Row="0" Grid.RowSpan="4" IsVisible="False"
-                Background="#D80F172A" Padding="60">
-            <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1"
+                Background="{DynamicResource OverlayStrongBackgroundBrush}" Padding="60">
+            <Border Background="{DynamicResource AppBackgroundBrush}" BorderBrush="{DynamicResource GraphNodeBorderBrush}" BorderThickness="1"
                     CornerRadius="10" Width="720" MinHeight="520" MaxHeight="720">
                 <ContentControl x:Name="WelcomeGuidePresenter" />
             </Border>
         </Border>
     </Grid>
 
-    <Window.Resources>
-        <SolidColorBrush x:Key="ToolbarButtonBackgroundBrush" Color="#1E293B" />
-        <SolidColorBrush x:Key="ToolbarButtonForegroundBrush" Color="#E2E8F0" />
-        <SolidColorBrush x:Key="ToolbarButtonBorderBrush" Color="#334155" />
-        <SolidColorBrush x:Key="ToolbarButtonHoverBackgroundBrush" Color="#243449" />
-        <SolidColorBrush x:Key="ToolbarButtonHoverBorderBrush" Color="#60A5FA" />
-        <SolidColorBrush x:Key="GraphNodeBorderBrush" Color="#334155" />
-        <SolidColorBrush x:Key="GraphNodeHoverBackgroundBrush" Color="#243449" />
-        <SolidColorBrush x:Key="GraphNodeHoverBorderBrush" Color="#60A5FA" />
-        <SolidColorBrush x:Key="GraphNodeHighlightBackgroundBrush" Color="#1E3A5F" />
-        <SolidColorBrush x:Key="GraphNodeHighlightBorderBrush" Color="#F59E0B" />
-        <SolidColorBrush x:Key="GraphNodeHubBackgroundBrush" Color="#17253D" />
-        <SolidColorBrush x:Key="GraphNodeHubBorderBrush" Color="#7DD3FC" />
-        <SolidColorBrush x:Key="GraphNodeSelectedBackgroundBrush" Color="#1F2937" />
-        <SolidColorBrush x:Key="GraphNodeSelectedBorderBrush" Color="#38BDF8" />
-        <SolidColorBrush x:Key="GraphNodeCustomSourceBorderBrush" Color="#F59E0B" />
-        <SolidColorBrush x:Key="GraphEdgeHighlightStrokeBrush" Color="#60A5FA" />
-        <SolidColorBrush x:Key="GraphEdgeDimmedStrokeBrush" Color="#334155" />
-        <SolidColorBrush x:Key="GraphEdgeCustomStrokeBrush" Color="#F59E0B" />
-        <SolidColorBrush x:Key="MinimapBackgroundBrush" Color="#CC0B1220" />
-        <SolidColorBrush x:Key="MinimapBorderBrush" Color="#334155" />
-        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F172A" />
-        <SolidColorBrush x:Key="ToolbarTextBrush" Color="#E2E8F0" />
-        <SolidColorBrush x:Key="GraphBackgroundBrush" Color="#0B1220" />
-        <SolidColorBrush x:Key="GraphEdgeStrokeBrush" Color="#7ba3e3" />
-        <SolidColorBrush x:Key="GraphNodeBackgroundBrush" Color="#1E293B" />
-        <SolidColorBrush x:Key="GraphNodeTextBrush" Color="#E2E8F0" />
-        <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#111827" />
-        <SolidColorBrush x:Key="SidebarBorderBrush" Color="#1F2937" />
-        <SolidColorBrush x:Key="SidebarItemBackgroundBrush" Color="#1E293B" />
-        <SolidColorBrush x:Key="SidebarItemBorderBrush" Color="#334155" />
-        <SolidColorBrush x:Key="SidebarItemTextBrush" Color="#CBD5E1" />
-        <SolidColorBrush x:Key="SidebarTextBrush" Color="#64748B" />
-        <SolidColorBrush x:Key="StatusbarBackgroundBrush" Color="#111827" />
-        <SolidColorBrush x:Key="StatusbarTextBrush" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="QueryBuilderWhereTableHeaderBrush" Color="#60A5FA" />
-        <SolidColorBrush x:Key="QueryBuilderAddClauseButtonBrush" Color="#60A5FA" />
-    </Window.Resources>
-
     <Window.Styles>
         <Style Selector="TreeView#WhereClauseTreeView Border.is-drop-target">
-            <Setter Property="Background" Value="#334155" />
-            <Setter Property="BorderBrush" Value="#60A5FA" />
+            <Setter Property="Background" Value="{DynamicResource SidebarItemBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GraphEdgeHighlightStrokeBrush}" />
         </Style>
         <Style Selector="TreeView#WhereClauseTreeView Border.is-validation-issue">
-            <Setter Property="BorderBrush" Value="#F87171" />
+            <Setter Property="BorderBrush" Value="{DynamicResource QueryBuilderValidationIssueBorderBrush}" />
             <Setter Property="BorderThickness" Value="2" />
         </Style>
         <Style Selector="Border.where-table-header">
         </Style>
         <Style Selector="Border.where-table-header.header">
-            <Setter Property="Background" Value="#16213A" />
+            <Setter Property="Background" Value="{DynamicResource QueryBuilderWhereTableHeaderBackgroundBrush}" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="8,5" />
             <Setter Property="Margin" Value="0,4,0,2" />

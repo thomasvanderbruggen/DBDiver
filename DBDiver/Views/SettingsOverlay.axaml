@@ -3,11 +3,17 @@
              xmlns:vm="using:DBDiver.ViewModels"
              x:Class="DBDiver.Views.SettingsOverlay"
              x:DataType="vm:SettingsViewModel">
-    <Grid RowDefinitions="*,Auto" Margin="16">
+    <Grid RowDefinitions="*,Auto" Margin="16" TextElement.Foreground="{DynamicResource SettingsTextBrush}">
         <TabControl x:Name="LayoutTabControl" Grid.Row="0">
             <TabItem Header="Appearance">
                 <ScrollViewer Margin="8">
-                    <ItemsControl x:Name="ThemeColorList" />
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Theme" Width="240" VerticalAlignment="Center" />
+                            <ComboBox x:Name="ThemeNameComboBox" Width="160" ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding SelectedTheme}" />
+                        </StackPanel>
+                        <ItemsControl x:Name="ThemeColorList" />
+                    </StackPanel>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="Layout Physics">
@@ -22,9 +28,9 @@
             </TabItem>
         </TabControl>
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
-            <Button x:Name="ResetButton" Content="Reset Section" />
-            <Button x:Name="SaveButton" Content="Save" Classes="accent" />
-            <Button x:Name="CloseButton" Content="Close" />
+            <Button x:Name="ResetButton" Content="Reset Section" Foreground="{DynamicResource SettingsButtonTextBrush}" />
+            <Button x:Name="SaveButton" Content="Save" Classes="accent" Foreground="{DynamicResource SettingsButtonTextBrush}" />
+            <Button x:Name="CloseButton" Content="Close" Foreground="{DynamicResource SettingsButtonTextBrush}" />
         </StackPanel>
     </Grid>
 </UserControl>

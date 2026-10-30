@@ -26,9 +26,9 @@ public class MinimapCanvas : Control
         var offsetX = Inset + (width - graphBounds.Width * scale) / 2;
         var offsetY = Inset + (height - graphBounds.Height * scale) / 2;
 
-        var nodeBrush = new SolidColorBrush(Color.FromRgb(148, 163, 184));
-        var hubBrush = new SolidColorBrush(Color.FromRgb(125, 211, 252));
-        var selectedBrush = new SolidColorBrush(Color.FromRgb(56, 189, 248));
+        var nodeBrush = GetResourceBrush("GraphEdgeDimmedStrokeBrush");
+        var hubBrush = GetResourceBrush("GraphNodeHubBorderBrush");
+        var selectedBrush = GetResourceBrush("GraphNodeSelectedBorderBrush");
 
         foreach (var node in vm.GraphNodes)
         {
@@ -41,9 +41,27 @@ public class MinimapCanvas : Control
         }
 
         var viewportRect = OwnerWindow.GetMinimapViewportRect(graphBounds, scale, offsetX, offsetY);
-        var viewportBrush = new SolidColorBrush(Color.FromArgb(70, 96, 165, 250));
-        var viewportPen = new Pen(new SolidColorBrush(Color.FromRgb(96, 165, 250)), 1);
+        var viewportBrush = new SolidColorBrush(GetResourceColor("MinimapViewportBrush"));
+        var viewportPen = new Pen(GetResourceBrush("GraphEdgeHighlightStrokeBrush"), 1);
         context.FillRectangle(viewportBrush, viewportRect);
         context.DrawRectangle(viewportPen, viewportRect, 2);
+    }
+
+    private Avalonia.Media.IBrush GetResourceBrush(string resourceKey)
+    {
+        if (this.TryGetResource(resourceKey, ActualThemeVariant, out var resource) == true
+            && resource is Avalonia.Media.IBrush brush)
+            return brush;
+
+        return Avalonia.Media.Brushes.Transparent;
+    }
+
+    private Color GetResourceColor(string resourceKey)
+    {
+        if (this.TryGetResource(resourceKey, ActualThemeVariant, out var resource) == true
+            && resource is Avalonia.Media.SolidColorBrush brush)
+            return brush.Color;
+
+        return Colors.Transparent;
     }
 }
