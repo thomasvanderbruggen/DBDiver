@@ -11,5 +11,8 @@
         <SolidColorBrush x:Key="QueryBuilderLeftJoinColorBrush" Color="#22C55E" />
         <SolidColorBrush x:Key="QueryBuilderRightJoinColorBrush" Color="#EC4899" />
         <SolidColorBrush x:Key="QueryBuilderFullJoinColorBrush" Color="#A855F7" />
+        <SolidColorBrush x:Key="QueryBuilderGroupDepth1Brush" Color="#60A5FA" />
+        <SolidColorBrush x:Key="QueryBuilderGroupDepth2Brush" Color="#22C55E" />
+        <SolidColorBrush x:Key="QueryBuilderGroupDepth3Brush" Color="#A855F7" />
     </Application.Resources>
 </Application>

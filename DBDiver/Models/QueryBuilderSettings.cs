@@ -16,6 +16,9 @@ public class QueryBuilderSettings
     public QueryBuilderJoinType DefaultJoinType { get; set; } = QueryBuilderJoinType.Left;
     public string WhereTableHeaderColor { get; set; } = GetResourceColor("QueryBuilderWhereTableHeaderBrush");
     public string AddClauseButtonColor { get; set; } = GetResourceColor("QueryBuilderAddClauseButtonBrush");
+    public string GroupDepth1Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth1Brush");
+    public string GroupDepth2Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth2Brush");
+    public string GroupDepth3Color { get; set; } = GetResourceColor("QueryBuilderGroupDepth3Brush");
 
     public string InnerColor { get; set; } = GetResourceColor("QueryBuilderInnerJoinColorBrush");
     public string LeftColor { get; set; } = GetResourceColor("QueryBuilderLeftJoinColorBrush");

@@ -642,6 +642,10 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         SetBrush("QueryBuilderFullJoinColorBrush", settings.FullColor);
         SetBrush("QueryBuilderWhereTableHeaderBrush", settings.WhereTableHeaderColor);
         SetBrush("QueryBuilderAddClauseButtonBrush", settings.AddClauseButtonColor);
+        SetBrush("QueryBuilderGroupDepth1Brush", settings.GroupDepth1Color);
+        SetBrush("QueryBuilderGroupDepth2Brush", settings.GroupDepth2Color);
+        SetBrush("QueryBuilderGroupDepth3Brush", settings.GroupDepth3Color);
+        WhereClauses.RefreshGroupDepthBrushes();
     }
 
     private void SetBrush(string resourceKey, string colorValue)
@@ -952,11 +956,8 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
             return;
         }
 
-        foreach (var clause in WhereClauses.Conditions)
-        {
-            if (clause.BuildClause() is { } builtClause)
-                query.AddWhereClause(builtClause);
-        }
+        foreach (var node in BuildWhereNodes(WhereClauses.RootItems))
+            query.AddWhereClause(node);
 
         if (query.WhereClauses.Count == 0 && WhereClauses.Conditions.Count > 0)
         {
@@ -972,6 +973,30 @@ ORDER BY s.name, t.name, c.column_id, fk.name;");
         Log.Information("Finished query with {TableCount} tables, {JoinCount} joins, {WhereClauseCount} WHERE clauses, and {ParameterCount} parameters",
             query.Tables.Count, query.Joins.Count, query.WhereClauses.Count, parameters.Count);
         QueryFinished?.Invoke();
+    }
+
+    private static IEnumerable<WhereClauseNode> BuildWhereNodes(IReadOnlyList<object> items)
+    {
+        foreach (var item in items)
+        {
+            if (item is WhereClauseViewModel condition)
+            {
+                if (condition.BuildClause() is { } clause)
+                    yield return clause;
+            }
+            else if (item is WhereClauseGroupViewModel group)
+            {
+                var children = BuildWhereNodes(group.Children).ToList();
+                if (children.Count == 0)
+                    continue;
+
+                yield return new QueryWhereGroup
+                {
+                    Connector = group.Connector,
+                    Children = children
+                };
+            }
+        }
     }
 
     private void UpdateFinishedQueryEmphasis()

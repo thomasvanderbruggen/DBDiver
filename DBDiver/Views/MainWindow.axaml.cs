@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private bool _isMinimapDragging;
     private GraphNode? _contextMenuNode;
     private SettingsOverlay? _settingsOverlay;
+    private object? _whereDragItem;
 
     public MainWindow()
     {
@@ -77,6 +78,10 @@ public partial class MainWindow : Window
         HelpButton.Click += (_, _) => ShowWelcomeGuide();
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.QueryFinished += OnQueryFinished;
+        WhereClauseTreeView.AddHandler(PointerPressedEvent, OnWhereClausePointerPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        WhereClauseTreeView.AddHandler(PointerMovedEvent, OnWhereClausePointerMoved, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        WhereClauseTreeView.AddHandler(PointerReleasedEvent, OnWhereClausePointerReleased, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        WhereClauseTreeView.AddHandler(PointerCaptureLostEvent, OnWhereClausePointerCaptureLost, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         GraphHost.AddHandler(PointerMovedEvent, OnDebugPointerEvent, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         GraphHost.AddHandler(PointerPressedEvent, OnDebugPointerEvent, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         Loaded += (_, _) => ShowWelcomeGuideOnFirstLoad();
@@ -328,6 +333,98 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel vm)
             ShowQueryResultDialog(vm.GeneratedSql);
+    }
+
+    private void OnWhereClausePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm ||
+            !e.GetCurrentPoint(WhereClauseTreeView).Properties.IsLeftButtonPressed ||
+            IsInteractiveWhereControl(e.Source as Control))
+            return;
+
+        _whereDragItem = FindWhereClauseItem(e.Source as Control);
+        if (_whereDragItem is not null)
+        {
+            vm.WhereClauses.Select(_whereDragItem);
+            vm.WhereClauses.BeginDrag(_whereDragItem);
+            e.Pointer.Capture(WhereClauseTreeView);
+            e.Handled = true;
+        }
+    }
+
+    private void OnWhereClausePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !ReferenceEquals(e.Pointer.Captured, WhereClauseTreeView))
+            return;
+
+        var target = FindWhereClauseItemAt(e.GetPosition(WhereClauseTreeView));
+        if (target is not null)
+            vm.WhereClauses.DragOver(target);
+    }
+
+    private void OnWhereClausePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm || !ReferenceEquals(e.Pointer.Captured, WhereClauseTreeView))
+            return;
+
+        var target = FindWhereClauseItemAt(e.GetPosition(WhereClauseTreeView));
+        if (target is not null)
+            vm.WhereClauses.CompleteDrag(target);
+        else
+            vm.WhereClauses.CompleteDrag(null);
+
+        _whereDragItem = null;
+        e.Pointer.Capture(null);
+    }
+
+    private void OnWhereClausePointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.WhereClauses.CompleteDrag(null);
+
+        _whereDragItem = null;
+    }
+
+    private static object? FindWhereClauseItem(Control? source)
+    {
+        while (source is not null)
+        {
+            if (source.Tag is WhereClauseViewModel or WhereClauseGroupViewModel)
+                return source.Tag;
+
+            source = source.Parent as Control;
+        }
+
+        return null;
+    }
+
+    private object? FindWhereClauseItemAt(Point position)
+    {
+        if (WhereClauseTreeView.InputHitTest(position) is not { } visual)
+            return null;
+
+        return FindWhereClauseItem(visual as Control);
+    }
+
+    private static void SetDragTarget(WhereClauseTreeViewModel tree, object? target)
+    {
+        if (target is not null)
+            tree.DragOver(target);
+        else
+            tree.DragOver(null!);
+    }
+
+    private static bool IsInteractiveWhereControl(Control? source)
+    {
+        while (source is not null)
+        {
+            if (source is ComboBox or TextBox or Button or RadioButton)
+                return true;
+
+            source = source.Parent as Control;
+        }
+
+        return false;
     }
 
     private void OnRelationshipChoiceRequested(IReadOnlyList<IReadOnlyList<DbRelationship>> paths, Action<IReadOnlyList<DbRelationship>> onSelect)

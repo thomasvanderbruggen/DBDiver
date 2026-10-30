@@ -29,6 +29,8 @@ public partial class SettingsOverlay : UserControl
         LayoutTabControl.SelectionChanged += OnLayoutTabSelected;
         if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" })
             BuildThemeEditor();
+        if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" })
+            BuildQueryBuilderEditor();
         SaveButton.Click += OnSaveClick;
         ResetButton.Click += OnResetClick;
         CloseButton.Click += (_, _) => CloseRequested?.Invoke();
@@ -40,6 +42,8 @@ public partial class SettingsOverlay : UserControl
             BuildLayoutEditor();
         else if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" } && ThemeColorList.ItemTemplate is null)
             BuildThemeEditor();
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" } && QueryBuilderPanel.Children.Count == 0)
+            BuildQueryBuilderEditor();
     }
 
     private void BuildThemeEditor()
@@ -114,10 +118,21 @@ public partial class SettingsOverlay : UserControl
             return;
 
         var hex = args.NewColor.ToString();
-        typeof(GraphThemeSettings).GetProperty(_editingPropertyName)?.SetValue(_viewModel.Theme, hex);
-        _viewModel.RaiseThemeChanged();
+        if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" })
+        {
+            typeof(QueryBuilderSettings).GetProperty(_editingPropertyName)?.SetValue(_viewModel.QueryBuilder, hex);
+            _viewModel.RaiseQueryBuilderChanged();
+            _viewModel.Save();
+        }
+        else
+        {
+            typeof(GraphThemeSettings).GetProperty(_editingPropertyName)?.SetValue(_viewModel.Theme, hex);
+            _viewModel.RaiseThemeChanged();
+        }
 
-        var targetRow = ThemeColorList.GetVisualDescendants().OfType<StackPanel>()
+        var targetRow = (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" }
+            ? QueryBuilderPanel.GetVisualDescendants()
+            : ThemeColorList.GetVisualDescendants()).OfType<StackPanel>()
             .FirstOrDefault(row => ReferenceEquals(row.Tag, _editingPropertyName));
         if (targetRow is null)
             return;
@@ -151,6 +166,79 @@ public partial class SettingsOverlay : UserControl
         }
     }
 
+    private void BuildQueryBuilderEditor()
+    {
+        QueryBuilderPanel.Children.Clear();
+
+        var joinTypePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        joinTypePanel.Children.Add(new TextBlock { Text = "Default Join Type", Width = 200, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var joinTypeDropdown = new ComboBox { Width = 160 };
+        foreach (var value in Enum.GetValues<QueryBuilderJoinType>())
+            joinTypeDropdown.Items.Add(value);
+        joinTypeDropdown.SelectedItem = _viewModel.QueryBuilder.DefaultJoinType;
+        joinTypeDropdown.SelectionChanged += (_, _) =>
+        {
+            if (joinTypeDropdown.SelectedItem is QueryBuilderJoinType selected)
+            {
+                _viewModel.QueryBuilder.DefaultJoinType = selected;
+                _viewModel.RaiseQueryBuilderChanged();
+            }
+        };
+        joinTypePanel.Children.Add(joinTypeDropdown);
+        QueryBuilderPanel.Children.Add(joinTypePanel);
+
+        var colorProperties = new[]
+        {
+            nameof(QueryBuilderSettings.GroupDepth1Color),
+            nameof(QueryBuilderSettings.GroupDepth2Color),
+            nameof(QueryBuilderSettings.GroupDepth3Color)
+        };
+        foreach (var propertyName in colorProperties)
+        {
+            var panel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Tag = propertyName };
+            panel.Children.Add(new TextBlock
+            {
+                Text = propertyName switch
+                {
+                    nameof(QueryBuilderSettings.GroupDepth1Color) => "Group Level 1 Color",
+                    nameof(QueryBuilderSettings.GroupDepth2Color) => "Group Level 2 Color",
+                    _ => "Group Level 3 Color"
+                },
+                Width = 200,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            });
+
+            var current = (string?)typeof(QueryBuilderSettings).GetProperty(propertyName)?.GetValue(_viewModel.QueryBuilder);
+            var input = new TextBox { Width = 120, Text = current };
+            var preview = new Border
+            {
+                Width = 24,
+                Height = 24,
+                CornerRadius = new Avalonia.CornerRadius(4),
+                BorderBrush = Avalonia.Media.Brushes.Gray,
+                BorderThickness = new Avalonia.Thickness(1),
+                Background = CreateBrush(current)
+            };
+            var pickButton = new Button { Content = "Pick…", Padding = new Avalonia.Thickness(8, 4) };
+            pickButton.Click += (_, _) => OpenPickerFlyoutForQueryBuilder(propertyName, pickButton);
+
+            input.TextChanged += (_, _) =>
+            {
+                if (Avalonia.Media.Color.TryParse(input.Text ?? string.Empty, out Avalonia.Media.Color parsed))
+                {
+                    typeof(QueryBuilderSettings).GetProperty(propertyName)?.SetValue(_viewModel.QueryBuilder, input.Text);
+                    preview.Background = new Avalonia.Media.SolidColorBrush(parsed);
+                    _viewModel.RaiseQueryBuilderChanged();
+                }
+            };
+
+            panel.Children.Add(preview);
+            panel.Children.Add(input);
+            panel.Children.Add(pickButton);
+            QueryBuilderPanel.Children.Add(panel);
+        }
+    }
+
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         _viewModel.Save();
@@ -161,11 +249,29 @@ public partial class SettingsOverlay : UserControl
     {
         if (LayoutTabControl.SelectedItem is TabItem { Header: "Appearance" })
             _viewModel.ResetTheme();
-        else
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Layout Physics" })
             _viewModel.ResetLayout();
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" })
+            _viewModel.ResetQueryBuilder();
 
         BuildThemeEditor();
         BuildLayoutEditor();
+        BuildQueryBuilderEditor();
+    }
+
+    private void OpenPickerFlyoutForQueryBuilder(string propertyName, Button sourceButton)
+    {
+        _editingPropertyName = propertyName;
+        _sharedPicker ??= new ColorPicker { Width = 340 };
+        _pickerFlyout ??= new Flyout { Content = _sharedPicker };
+
+        var currentValue = (string?)typeof(QueryBuilderSettings).GetProperty(propertyName)?.GetValue(_viewModel.QueryBuilder);
+        if (Avalonia.Media.Color.TryParse(currentValue ?? string.Empty, out Avalonia.Media.Color color))
+            _sharedPicker.Color = color;
+
+        _sharedPicker.ColorChanged -= OnPickerColorChanged;
+        _sharedPicker.ColorChanged += OnPickerColorChanged;
+        _pickerFlyout.ShowAt(sourceButton);
     }
 
     private void CopyColorSetting(string propertyName)

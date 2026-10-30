@@ -214,7 +214,10 @@ public partial class SettingsWindow : Window
             nameof(QueryBuilderSettings.RightColor),
             nameof(QueryBuilderSettings.FullColor),
             nameof(QueryBuilderSettings.WhereTableHeaderColor),
-            nameof(QueryBuilderSettings.AddClauseButtonColor)
+            nameof(QueryBuilderSettings.AddClauseButtonColor),
+            nameof(QueryBuilderSettings.GroupDepth1Color),
+            nameof(QueryBuilderSettings.GroupDepth2Color),
+            nameof(QueryBuilderSettings.GroupDepth3Color)
         };
         foreach (var propertyName in colorProperties)
         {
@@ -225,6 +228,9 @@ public partial class SettingsWindow : Window
                 {
                     nameof(QueryBuilderSettings.WhereTableHeaderColor) => "Where Table Header Color",
                     nameof(QueryBuilderSettings.AddClauseButtonColor) => "Add Clause Button Color",
+                    nameof(QueryBuilderSettings.GroupDepth1Color) => "Group Level 1 Color",
+                    nameof(QueryBuilderSettings.GroupDepth2Color) => "Group Level 2 Color",
+                    nameof(QueryBuilderSettings.GroupDepth3Color) => "Group Level 3 Color",
                     _ => propertyName.Replace("Color", " Join Color")
                 },
                 Width = 200,

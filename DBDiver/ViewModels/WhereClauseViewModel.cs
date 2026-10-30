@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Avalonia;
+using Avalonia.Media;
 using DBDiver.Models;
 
 namespace DBDiver.ViewModels;
@@ -161,7 +163,8 @@ public static class WhereClauseFactory
     }
 }
 
-public class WhereClauseViewModel : ViewModelBase
+public class WhereClauseViewModel : ViewModelBase,
+    WhereClauseTreeViewModel.IWhereClauseItem
 {
     private WhereDropdownOption? _selectedColumn;
     private WhereOperatorOption? _selectedOperator;
@@ -170,8 +173,37 @@ public class WhereClauseViewModel : ViewModelBase
     private WhereClauseConnector _connector;
     private bool _hasValidationIssue;
     private bool _isDropTarget;
+    private bool _hasConnector;
+    private int _parentGroupDepth;
 
     public event Action? ValidationIssueChanged;
+
+    public bool HasConnector
+    {
+        get => _hasConnector;
+        set => SetProperty(ref _hasConnector, value);
+    }
+
+    public string ConnectorGroup => $"WhereConnector_{GetHashCode()}";
+
+    public int ParentGroupDepth
+    {
+        get => _parentGroupDepth;
+        set => SetProperty(ref _parentGroupDepth, value);
+    }
+
+    public IBrush GroupDepthBrush => (ParentGroupDepth % 3) switch
+    {
+        0 => GetResourceBrush("QueryBuilderGroupDepth1Brush"),
+        1 => GetResourceBrush("QueryBuilderGroupDepth2Brush"),
+        _ => GetResourceBrush("QueryBuilderGroupDepth3Brush")
+    };
+
+    public void NotifyGroupDepthBrushChanged() => OnPropertyChanged(nameof(GroupDepthBrush));
+
+    private static IBrush GetResourceBrush(string resourceKey)
+        => Application.Current?.TryGetResource(resourceKey, Application.Current.ActualThemeVariant, out var resource) == true
+            && resource is IBrush brush ? brush : Brushes.Transparent;
 
     public bool IsDropTarget
     {
@@ -264,7 +296,6 @@ public class WhereClauseViewModel : ViewModelBase
         }
     }
 
-    public IReadOnlyList<object> Children { get; } = [];
 
     public bool IsAnd
     {
