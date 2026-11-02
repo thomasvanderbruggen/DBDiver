@@ -29,25 +29,31 @@ public class CsvSchemaService : ISchemaService
     private static DbSchema LoadTypedSchema(string[] lines, string filePath)
     {
         var header = ParseCsvLine(lines[0]);
+        var schema = LoadSchemaFromRows(
+            lines.Skip(1)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(line => ParseCsvRow(line, header)));
+
+        Log.Information(
+            "Loaded typed CSV schema {FilePath} with {TableCount} tables and {RelationshipCount} relationships",
+            filePath, schema.Tables.Count, schema.Relationships.Count);
+        return schema;
+    }
+
+    public static DbSchema LoadSchemaFromRows(IEnumerable<Dictionary<string, string>> rows)
+    {
         var schema = new DbSchema();
         var tableIndex = new Dictionary<string, DbTable>(StringComparer.OrdinalIgnoreCase);
         var primaryKeys = new Dictionary<(string Schema, string Table), Dictionary<string, int>>();
         var relationshipOrdinals = new Dictionary<DbRelationship, int>();
 
-        for (var i = 1; i < lines.Length; i++)
+        foreach (var row in rows)
         {
-            if (string.IsNullOrWhiteSpace(lines[i]))
-                continue;
-
-            var row = ParseCsvRow(lines[i], header);
             var tableName = GetQualifiedTableName(
                 row.GetValueOrDefault("schema", string.Empty),
                 row.GetValueOrDefault("table", string.Empty));
             if (tableName is null)
-            {
-                Log.Information("Typed CSV schema row {Row} is a separator or null table row, skipping", i + 1);
                 continue;
-            }
 
             var tableIdentity = SplitQualifiedTableName(tableName);
             var qualifiedTableName = GetTableIdentifier(tableIdentity.Schema, tableIdentity.Table);
@@ -56,7 +62,9 @@ public class CsvSchemaService : ISchemaService
                 table = new DbTable { Schema = tableIdentity.Schema, Name = tableIdentity.Table };
                 schema.Tables.Add(table);
                 tableIndex[tableName] = table;
+                tableIndex.TryAdd(qualifiedTableName, table);
             }
+
             primaryKeys.TryAdd(tableIdentity, []);
 
             var columnName = row.GetValueOrDefault("column", string.Empty);
@@ -81,22 +89,25 @@ public class CsvSchemaService : ISchemaService
                 relationshipOrdinals[relationship] = ParseInt32(row.GetValueOrDefault("fk_ordinal", string.Empty));
         }
 
+        ApplyTypedSchemaMetadata(schema, tableIndex, primaryKeys, relationshipOrdinals);
+        return schema;
+    }
+
+    private static void ApplyTypedSchemaMetadata(
+        DbSchema schema,
+        Dictionary<string, DbTable> tableIndex,
+        Dictionary<(string Schema, string Table), Dictionary<string, int>> primaryKeys,
+        Dictionary<DbRelationship, int> relationshipOrdinals)
+    {
         foreach (var (tableIdentity, keys) in primaryKeys)
-        {
             tableIndex[GetTableIdentifier(tableIdentity.Schema, tableIdentity.Table)].PrimaryKeys = keys
                 .OrderBy(key => key.Value)
                 .ThenBy(key => key.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(key => key.Key)
                 .ToList();
-        }
 
         foreach (var (relationship, ordinal) in relationshipOrdinals)
             relationship.ConstraintOrdinal = ordinal;
-
-        Log.Information(
-            "Loaded typed CSV schema {FilePath} with {TableCount} tables and {RelationshipCount} relationships",
-            filePath, schema.Tables.Count, schema.Relationships.Count);
-        return schema;
     }
 
     private static DbRelationship? AddTypedRelationship(

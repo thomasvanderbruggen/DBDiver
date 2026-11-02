@@ -76,6 +76,7 @@ public partial class MainWindow : Window
         ResetQueryButton.Click += OnResetQueryClick;
         SettingsButton.Click += OnSettingsClick;
         HelpButton.Click += (_, _) => ShowWelcomeGuide();
+        ConnectToDatabaseButton.Click += OnConnectToDatabaseClick;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.QueryFinished += OnQueryFinished;
         WhereClauseTreeView.AddHandler(PointerPressedEvent, OnWhereClausePointerPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel);
@@ -91,6 +92,33 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel viewModel && !viewModel.CurrentSettings.HasSeenWelcomeGuide)
             ShowWelcomeGuide();
+    }
+
+    private async void OnConnectToDatabaseClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var dialogViewModel = new DirectDatabaseConnectionViewModel();
+        var dialog = new DirectDatabaseConnectionWindow(dialogViewModel);
+        var result = await dialog.ShowDialog<DbSchema>(this);
+
+        if (result is null)
+            return;
+
+        try
+        {
+            var sourceName = dialogViewModel.UseWindowsAuthentication
+                ? $"{dialogViewModel.Server}/{dialogViewModel.Database}"
+                : $"{dialogViewModel.Server}/{dialogViewModel.Database}/{dialogViewModel.Username}";
+
+            viewModel.LoadSchemaFromDatabase(result, sourceName);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load database schema into the graph");
+            viewModel.StatusText = $"Error loading database schema: {ex.Message}";
+        }
     }
 
     private void ShowWelcomeGuide()

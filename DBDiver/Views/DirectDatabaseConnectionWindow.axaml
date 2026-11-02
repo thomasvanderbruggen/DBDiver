@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DBDiver.ViewModels"
+        x:Class="DBDiver.Views.DirectDatabaseConnectionWindow"
+        x:DataType="vm:DirectDatabaseConnectionViewModel"
+        Title="Direct Database Connection"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}"
+        ShowInTaskbar="False"
+        CanResize="False">
+    <Grid Margin="16" RowDefinitions="Auto,8,Auto,8,Auto,*,Auto" TextElement.Foreground="{DynamicResource ToolbarTextBrush}">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Text="Provider:" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="SQL Server" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <TextBlock Text="Windows auth:" VerticalAlignment="Center" />
+                <CheckBox IsChecked="{Binding UseWindowsAuthentication}" />
+            </StackPanel>
+        </Grid>
+
+        <CheckBox Grid.Row="1" IsChecked="{Binding TrustServerCertificate}" Content="Trust server certificate (skip TLS certificate validation)"
+                  ToolTip.Tip="Bypass certificate validation. Use only with a trusted network or a known self-signed SQL Server certificate." />
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="8">
+                <TextBlock Text="Server" />
+                <TextBox Width="360" Text="{Binding Server}" PlaceholderText="server\instance" />
+                <TextBlock Text="Database" />
+                <TextBox Width="360" Text="{Binding Database}" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="4" Spacing="8" IsVisible="{Binding IsSqlAuthentication}">
+            <TextBlock Text="Username" />
+            <TextBox Width="360" Text="{Binding Username}" />
+            <TextBlock Text="Password" />
+            <TextBox Width="360" Text="{Binding Password}" PasswordChar="*" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="5" Text="{Binding StatusText}" TextWrapping="Wrap" Margin="0,12,0,0" />
+
+        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="Test Connection" Command="{Binding TestConnectionCommand}" IsEnabled="{Binding !IsBusy}" />
+            <Button Content="Connect" Classes="accent" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
+            <Button Content="Cancel" Click="OnCancelClick" IsEnabled="{Binding !IsBusy}" />
+        </StackPanel>
+    </Grid>
+</Window>
