@@ -338,8 +338,7 @@ public partial class MainWindow : Window
 
         if (_settingsOverlay is null)
         {
-            var settingsService = new SettingsService();
-            var settingsViewModel = new SettingsViewModel(settingsService, settingsService.Load());
+            var settingsViewModel = new SettingsViewModel(new SettingsService(), vm.CurrentSettings);
             settingsViewModel.SettingsChanged += vm.ApplySettingsDebounced;
             _settingsOverlay = new SettingsOverlay(settingsViewModel);
             _settingsOverlay.CloseRequested += () => SettingsOverlayHost.IsVisible = false;

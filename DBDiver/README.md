@@ -38,20 +38,34 @@ Download the application from the releases page and run! The application provide
         - Build Query: This starts the query-building process. Left click on any tables you want to add to the join. If there are multiple paths to take from Table A -> B, you will be presented with a menu to select the option you would like the app to take. 
         - Finish Query: Finishes the query-building process and presents a `SELECT *` statement with the joins you added
         - Find a Table From Here: Opens a type-ahead search field with all the tables in the database and automatically finds the shortest path to the table. 
-4. Extras
+4. Natural Language processing. 
+   - Add your preferred Open AI-compatible LLM provider and build out queries that know your schema. 
+   - The LLM-generated query is validated against the loaded schema to ensure it is valid
+   - No queries are executed against your database; however, your database schema will be sent to the LLM via compact DDL
+     - The data inside your database is NEVER sent. 
+   - LLMs make mistakes, review the generated SQL before running
+   - Currently supported: 
+     - SELECT statements only 
+     - Aggregate Functions: COUNT(), SUM(), AVG(), MIN(), MAX()
+     - WHERE Clauses: `=`, `<`, `>`, `<=`, `>=`, `<>`, `LIKE`, `NOT LIKE`, `BETWEEN`, `IS NULL`, `IS NOT NULL`, 
+       - Nested WHERE ClAUSES
+     - TOP and DISTINCT keywords
+     - Data types: Numerics, Strings, LegacyText, Date, Time, DateTime, DateTimeOffset, Bit, Binary, RowVersion, Guid, HierarchyId
+     - INNER, LEFT, RIGHT, and FULL JOIN 
+     - GROUP BY and ORDER BY 
+   - The visualizer updates to highlight the join path created for the query
+5. Extras
     - Save custom schemas for later use. 
     - Customize all the colors used in the application and the attraction and repulsion physics of the graph UI. 
     - Viewport controls
         - Zoom in, fit-to-screen, zoom out, reset view. 
         - Change hop count to alter how many tables the UI will traverse to show nearby tables
-5. WHERE Clause Building 
+6. WHERE Clause Building 
    - Build out WHERE Clauses using a drag-and-drop UI. 
    - Supports grouping conditions and nested groups
 
 ## 🗺️ Feature Roadmap
-1. Add direct database connections
-2. UNION and subquery support 
-
+1. Natural Language processing via Open AI-compatible LLM connection.
 
 ## 📝 License 
 

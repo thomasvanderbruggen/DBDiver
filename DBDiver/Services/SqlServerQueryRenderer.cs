@@ -25,7 +25,8 @@ public class SqlServerQueryRenderer
 
         var sql = new StringBuilder();
         var parameterValues = new List<QueryParameter>();
-        sql.Append("SELECT * FROM ");
+        AppendSelect(sql, query);
+        sql.Append(" FROM ");
         AppendTable(sql, query.Tables[0]);
 
         foreach (var join in query.Joins)
@@ -41,8 +42,61 @@ public class SqlServerQueryRenderer
         }
 
         AppendWhereClauses(sql, query.WhereClauses, parameterValues, useParameters);
+        AppendGroupBy(sql, query.GroupByItems);
+        AppendOrderBy(sql, query.OrderByItems);
         parameters = parameterValues;
         return sql.ToString();
+    }
+
+    private static void AppendSelect(StringBuilder sql, QueryModel query)
+    {
+        sql.Append("SELECT ");
+
+        if (query.Projection is { } projection)
+        {
+            if (projection.IsDistinct)
+                sql.Append("DISTINCT ");
+
+            for (var index = 0; index < projection.Items.Count; index++)
+            {
+                if (index > 0)
+                    sql.Append(", ");
+
+                AppendProjectionItem(sql, projection.Items[index]);
+            }
+
+            return;
+        }
+
+        sql.Append('*');
+    }
+
+    private static void AppendProjectionItem(StringBuilder sql, QueryProjectionItem item)
+    {
+        if (item.Aggregation is { } aggregation)
+        {
+            sql.Append(GetAggregateFunction(aggregation));
+            sql.Append('(');
+            if (item.Column == "*")
+                sql.Append('*');
+            else
+                AppendColumn(sql, item.Table.Alias, item.Column);
+            sql.Append(')');
+        }
+        else
+        {
+            if (item.Column == "*")
+                sql.Append('*');
+            else
+                AppendColumn(sql, item.Table.Alias, item.Column);
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.Alias))
+        {
+            sql.Append(" AS [");
+            sql.Append(item.Alias);
+            sql.Append(']');
+        }
     }
 
     private static void AppendWhereClauses(
@@ -179,6 +233,59 @@ public class SqlServerQueryRenderer
     };
 
     private static string GetParameterName(int index) => $"@where{index}";
+
+    private static string GetAggregateFunction(QueryAggregateFunction function) => function switch
+    {
+        QueryAggregateFunction.Count => "COUNT",
+        QueryAggregateFunction.Sum => "SUM",
+        QueryAggregateFunction.Average => "AVG",
+        QueryAggregateFunction.Minimum => "MIN",
+        QueryAggregateFunction.Maximum => "MAX",
+        _ => throw new ArgumentOutOfRangeException(nameof(function), function, "Unsupported aggregate function")
+    };
+
+    private static void AppendGroupBy(StringBuilder sql, IReadOnlyList<QueryGroupByItem> items)
+    {
+        if (items.Count == 0)
+            return;
+
+        sql.AppendLine();
+        sql.Append("GROUP BY ");
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (index > 0)
+                sql.Append(", ");
+            AppendColumn(sql, items[index].Table.Alias, items[index].Column);
+        }
+    }
+
+    private static void AppendOrderBy(StringBuilder sql, IReadOnlyList<QueryOrderByItem> items)
+    {
+        if (items.Count == 0)
+            return;
+
+        sql.AppendLine();
+        sql.Append("ORDER BY ");
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (index > 0)
+                sql.Append(", ");
+
+            var item = items[index];
+            if (item.Aggregation is { } aggregation)
+            {
+                sql.Append(GetAggregateFunction(aggregation));
+                sql.Append('(');
+            }
+
+            AppendColumn(sql, item.Table.Alias, item.Column);
+
+            if (item.Aggregation is { })
+                sql.Append(')');
+
+            sql.Append(items[index].Direction == QueryOrderDirection.Ascending ? " ASC" : " DESC");
+        }
+    }
 
     private static void AppendTable(StringBuilder sql, QueryTable table)
     {

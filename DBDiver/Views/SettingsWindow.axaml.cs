@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using System.Diagnostics;
 using DBDiver.Models;
+using DBDiver.Services;
 using DBDiver.ViewModels;
 
 namespace DBDiver.Views;
@@ -15,6 +16,7 @@ public partial class SettingsWindow : Window
     private ColorPicker? _sharedPicker;
     private Flyout? _pickerFlyout;
     private string? _editingPropertyName;
+    private TextBox? _apiKeyInput;
 
     public SettingsWindow(SettingsViewModel viewModel)
     {
@@ -54,6 +56,8 @@ public partial class SettingsWindow : Window
             BuildLayoutEditor();
         else if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" } && QueryBuilderPanel.Children.Count == 0)
             BuildQueryBuilderEditor();
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Natural Language" } && NaturalLanguagePanel.Children.Count == 0)
+            BuildNaturalLanguageEditor();
     }
 
     private void BuildThemeEditor()
@@ -283,6 +287,66 @@ public partial class SettingsWindow : Window
         Serilog.Log.Information("[SettingsTiming] BuildQueryBuilderEditor completed in {ElapsedMs} ms", buildStopwatch.ElapsedMilliseconds);
     }
 
+    private void BuildNaturalLanguageEditor()
+    {
+        NaturalLanguagePanel.Children.Clear();
+
+        var baseUrlPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        baseUrlPanel.Children.Add(new TextBlock { Text = "Base URL (/v1)", Width = 200, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var baseUrlInput = new TextBox { Width = 260, Text = _viewModel.NaturalLanguage.BaseUrl, PlaceholderText = "https://api.openai.com/v1" };
+        baseUrlInput.TextChanged += (_, _) =>
+        {
+            _viewModel.NaturalLanguage.BaseUrl = baseUrlInput.Text ?? string.Empty;
+            _viewModel.RaiseNaturalLanguageChanged();
+        };
+        baseUrlPanel.Children.Add(baseUrlInput);
+
+        var modelPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        modelPanel.Children.Add(new TextBlock { Text = "Model Name", Width = 200, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var modelInput = new TextBox { Width = 260, Text = _viewModel.NaturalLanguage.ModelName, PlaceholderText = "gpt-4o-mini" };
+        modelInput.TextChanged += (_, _) =>
+        {
+            _viewModel.NaturalLanguage.ModelName = modelInput.Text ?? string.Empty;
+            _viewModel.RaiseNaturalLanguageChanged();
+        };
+        modelPanel.Children.Add(modelInput);
+
+        var apiKeyPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        apiKeyPanel.Children.Add(new TextBlock { Text = "API Key", Width = 200, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        _apiKeyInput = new TextBox { Width = 260, PasswordChar = '*', PlaceholderText = "Stored in the OS credential store" };
+        apiKeyPanel.Children.Add(_apiKeyInput);
+
+        var keyButtonPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        var saveKeyButton = new Button { Content = "Save API Key", Padding = new Avalonia.Thickness(8, 4) };
+        var clearKeyButton = new Button { Content = "Clear API Key", Padding = new Avalonia.Thickness(8, 4) };
+        keyButtonPanel.Children.Add(saveKeyButton);
+        keyButtonPanel.Children.Add(clearKeyButton);
+
+        saveKeyButton.Click += async (_, _) => await SaveApiKeyAsync();
+        clearKeyButton.Click += async (_, _) => await ClearApiKeyAsync();
+
+        NaturalLanguagePanel.Children.Add(baseUrlPanel);
+        NaturalLanguagePanel.Children.Add(modelPanel);
+        NaturalLanguagePanel.Children.Add(apiKeyPanel);
+        NaturalLanguagePanel.Children.Add(keyButtonPanel);
+    }
+
+    private async Task SaveApiKeyAsync()
+    {
+        if (_apiKeyInput?.Text is not { Length: > 0 } apiKey)
+            return;
+
+        await new ApiKeyCredentialService().SetApiKeyAsync(apiKey);
+        _apiKeyInput.Text = string.Empty;
+    }
+
+    private async Task ClearApiKeyAsync()
+    {
+        await new ApiKeyCredentialService().ClearApiKeyAsync();
+        if (_apiKeyInput is not null)
+            _apiKeyInput.Text = string.Empty;
+    }
+
     private void OpenPickerFlyoutForQueryBuilder(string propertyName, Button sourceButton)
     {
         _editingPropertyName = propertyName;
@@ -333,6 +397,12 @@ public partial class SettingsWindow : Window
             _viewModel.ResetLayout();
         else if (LayoutTabControl.SelectedItem is TabItem { Header: "Query Builder" })
             _viewModel.ResetQueryBuilder();
+        else if (LayoutTabControl.SelectedItem is TabItem { Header: "Natural Language" })
+        {
+            _viewModel.NaturalLanguage.BaseUrl = "https://api.openai.com/v1";
+            _viewModel.NaturalLanguage.ModelName = string.Empty;
+            _viewModel.RaiseNaturalLanguageChanged();
+        }
 
         BuildThemeEditor();
         BuildLayoutEditor();

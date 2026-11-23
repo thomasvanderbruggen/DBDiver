@@ -32,12 +32,15 @@ public class MainViewModel : ViewModelBase
 
             return Avalonia.Media.Brush.Parse("#60A5FA");
         });
+    public static readonly Avalonia.Data.Converters.FuncValueConverter<string, bool> NonEmptyStringConverter =
+        new(value => !string.IsNullOrWhiteSpace(value));
     private readonly ISchemaService _schemaService;
     private readonly GraphLayoutService _graphLayout = new();
     private readonly SettingsService _settingsService = new();
     private readonly AppSettings _appSettings;
     private readonly QueryPathService _queryPathService = new();
     private readonly SqlServerQueryRenderer _queryRenderer = new();
+    public NaturalLanguageQueryViewModel NaturalLanguage { get; }
     private QueryModel? _activeQuery;
     private string _statusText = "Ready";
     private DbSchema? _currentSchema;
@@ -50,6 +53,8 @@ public class MainViewModel : ViewModelBase
     {
         _schemaService = schemaService;
         _appSettings = _settingsService.Load();
+        NaturalLanguage = new NaturalLanguageQueryViewModel(_appSettings);
+        NaturalLanguage.QueryGenerated += OnNaturalLanguageQueryGenerated;
         ColorSchemeService.ApplyThemeVariant(_appSettings.ThemeName);
         CopySchemaCommand = new RelayCommand(_ => CopySchemaCommandToClipboard());
         LoadSchemaCommand = new RelayCommand(_ => LoadSchemaFromFile());
@@ -638,6 +643,7 @@ public class MainViewModel : ViewModelBase
         foreach (var rel in schema.Relationships)
             Relationships.Add(rel);
         _currentSchema = schema;
+        NaturalLanguage.Schema = schema;
     }
 
     public void LoadSchemaFromDatabase(DbSchema schema, string sourceName)
@@ -979,6 +985,18 @@ public class MainViewModel : ViewModelBase
                 };
             }
         }
+    }
+
+    private void OnNaturalLanguageQueryGenerated(QueryModel query, IReadOnlyList<DbRelationship> joinRelationships)
+    {
+        _activeQuery = query;
+        GeneratedSql = _queryRenderer.Render(query);
+        OnPropertyChanged(nameof(IsQueryBuilding));
+        RebuildWhereClauses();
+        AssignQueryJoinsToEdges();
+        UpdateFinishedQueryEmphasis();
+        StatusText = "Natural-language query generated successfully.";
+        QueryFinished?.Invoke();
     }
 
     private void UpdateFinishedQueryEmphasis()

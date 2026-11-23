@@ -30,6 +30,11 @@
                     <StackPanel x:Name="QueryBuilderPanel" Spacing="10" />
                 </ScrollViewer>
             </TabItem>
+            <TabItem Header="Natural Language">
+                <ScrollViewer Margin="8">
+                    <StackPanel x:Name="NaturalLanguagePanel" Spacing="10" />
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
             <Button x:Name="ResetButton" Content="Reset Section" Foreground="{DynamicResource SettingsButtonTextBrush}" />

@@ -22,6 +22,7 @@ public class SettingsViewModel : ViewModelBase
     public GraphThemeSettings Theme => _settings.Theme;
     public GraphLayoutSettings Layout => _settings.Layout;
     public QueryBuilderSettings QueryBuilder => _settings.QueryBuilder;
+    public NaturalLanguageSettings NaturalLanguage => _settings.NaturalLanguage;
 
     public IReadOnlyList<string> ThemeNames => ColorSchemeService.Schemes.Select(scheme => scheme.Name).ToList();
 
@@ -103,6 +104,12 @@ public class SettingsViewModel : ViewModelBase
     public void RaiseQueryBuilderChanged()
     {
         OnPropertyChanged(nameof(QueryBuilder));
+        MarkDirty();
+    }
+
+    public void RaiseNaturalLanguageChanged()
+    {
+        OnPropertyChanged(nameof(NaturalLanguage));
         MarkDirty();
     }
 }
