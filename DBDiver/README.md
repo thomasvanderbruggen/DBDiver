@@ -54,6 +54,18 @@ Download the application from the releases page and run! The application provide
      - INNER, LEFT, RIGHT, and FULL JOIN 
      - GROUP BY and ORDER BY 
    - The visualizer updates to highlight the join path created for the query
+   - **LLM Contract**
+     - DB Diver sends the compact schema DDL and a system prompt to an Open AI-compatible `/v1/chat/completions` endpoint.
+     - The model returns strict JSON using version `1` of the DB Diver query contract.
+     - The response is deserialized into a dedicated DTO, validated against the loaded schema, and then mapped into DB Diver's `QueryModel`.
+     - `from` only needs to include tables that supply referenced columns. DB Diver infers the complete join path and adds any intermediate tables.
+     - Non-SELECT requests must be rejected by setting `rejected: true` and providing a non-empty `rejectionReason`.
+     - `select.columns` supports qualified columns, `*`, `COUNT(*)`, optional aliases, and optional `DISTINCT`.
+     - `where` supports condition nodes and nested group nodes. Condition values are represented as arrays. The first node omits `operator`; following nodes use `AND` or `OR`.
+     - `groupBy` contains qualified columns.
+     - `orderBy` contains qualified columns, optional aggregation, and `ASC` or `DESC` direction.
+     - Unsupported SQL features are deferred for now: `TOP`, `HAVING`, `OFFSET-FETCH`, subqueries, and `UNION`.
+     - A valid response is displayed as generated SQL. Invalid responses are retried once with the validation errors, and the final raw response is preserved for review.
 5. Extras
     - Save custom schemas for later use. 
     - Customize all the colors used in the application and the attraction and repulsion physics of the graph UI. 
