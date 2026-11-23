@@ -1,0 +1,575 @@
+[
+  {
+    "id": "query-001",
+    "category": "basic-aggregate",
+    "split": "tune",
+    "expectedOutcome": "skip",
+    "schema": "sales",
+    "prompt": "How many products contain the color green and have a price greater than 5?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "Color", "comparator": "=", "value": ["green"] },
+        { "type": "condition", "table": "Product", "column": "ListPrice", "comparator": ">", "value": ["5"], "operator": "AND" }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-002",
+    "category": "basic-select",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the name and list price of every product.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "Product", "column": "ListPrice" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-003",
+    "category": "basic-select",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the first name and last name of every person.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Person", "column": "FirstName" }, { "table": "Person", "column": "LastName" } ] },
+      "from": ["Person"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-004",
+    "category": "basic-select",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show everything in the Department table.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Department", "column": "*" } ] },
+      "from": ["Department"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-005",
+    "category": "filter",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "List the names of products with a list price above 1000.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "ListPrice", "comparator": ">", "value": ["1000"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-006",
+    "category": "filter",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the job title and hire date of employees hired after January 1, 2010.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Employee", "column": "JobTitle" }, { "table": "Employee", "column": "HireDate" } ] },
+      "from": ["Employee"],
+      "where": [
+        { "type": "condition", "table": "Employee", "column": "HireDate", "comparator": ">", "value": ["2010-01-01"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-007",
+    "category": "filter",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "List the names of products whose name contains the word Road.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "Name", "comparator": "LIKE", "value": ["%Road%"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-008",
+    "category": "filter",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the name of vendors that have a credit rating of 1.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Vendor", "column": "Name" } ] },
+      "from": ["Vendor"],
+      "where": [
+        { "type": "condition", "table": "Vendor", "column": "CreditRating", "comparator": "=", "value": ["1"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-009",
+    "category": "filter",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the address line and postal code of addresses in the city of Seattle.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Address", "column": "AddressLine1" }, { "table": "Address", "column": "PostalCode" } ] },
+      "from": ["Address"],
+      "where": [
+        { "type": "condition", "table": "Address", "column": "City", "comparator": "=", "value": ["Seattle"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-010",
+    "category": "in-between-null",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the name and color of products that are red or black.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "Product", "column": "Color" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "Color", "comparator": "IN", "value": ["Red", "Black"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    },
+    "notes": "Deferred until IN is supported. Two OR conditions on Color are an equivalent answer."
+  },
+  {
+    "id": "query-011",
+    "category": "in-between-null",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "List the names of products with a list price between 100 and 500.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "ListPrice", "comparator": "BETWEEN", "value": ["100", "500"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-012",
+    "category": "in-between-null",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the names of products that have no color.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "Color", "comparator": "IS NULL", "value": [] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-013",
+    "category": "in-between-null",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the names of products that have a size.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        { "type": "condition", "table": "Product", "column": "Size", "comparator": "IS NOT NULL", "value": [] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-014",
+    "category": "nested-where",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the names of products that are either red with a list price over 1000, or black with a list price under 100.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [
+        {
+          "type": "group",
+          "children": [
+            { "type": "condition", "table": "Product", "column": "Color", "comparator": "=", "value": ["Red"] },
+            { "type": "condition", "table": "Product", "column": "ListPrice", "comparator": ">", "value": ["1000"], "operator": "AND" }
+          ]
+        },
+        {
+          "type": "group",
+          "operator": "OR",
+          "children": [
+            { "type": "condition", "table": "Product", "column": "Color", "comparator": "=", "value": ["Black"] },
+            { "type": "condition", "table": "Product", "column": "ListPrice", "comparator": "<", "value": ["100"], "operator": "AND" }
+          ]
+        }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    },
+    "notes": "Check this against how your DTO models groups: first node omits operator, a group carries the operator that joins it to the previous node, and the first child inside a group omits it."
+  },
+  {
+    "id": "query-015",
+    "category": "nested-where",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the job title of employees who have more than 50 vacation hours or more than 40 sick leave hours, and were hired after January 1, 2008.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Employee", "column": "JobTitle" } ] },
+      "from": ["Employee"],
+      "where": [
+        {
+          "type": "group",
+          "children": [
+            { "type": "condition", "table": "Employee", "column": "VacationHours", "comparator": ">", "value": ["50"] },
+            { "type": "condition", "table": "Employee", "column": "SickLeaveHours", "comparator": ">", "value": ["40"], "operator": "OR" }
+          ]
+        },
+        { "type": "condition", "table": "Employee", "column": "HireDate", "comparator": ">", "value": ["2008-01-01"], "operator": "AND" }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-016",
+    "category": "basic-aggregate",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "What is the average list price of all products?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "ListPrice", "aggregation": "AVG" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-017",
+    "category": "basic-aggregate",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "What are the highest and lowest list prices among products?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "ListPrice", "aggregation": "MAX" }, { "table": "Product", "column": "ListPrice", "aggregation": "MIN" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-018",
+    "category": "basic-aggregate",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "How many employees are there?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Employee", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Employee"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-019",
+    "category": "basic-aggregate",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "How many vendors have a credit rating of 1?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Vendor", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Vendor"],
+      "where": [
+        { "type": "condition", "table": "Vendor", "column": "CreditRating", "comparator": "=", "value": ["1"] }
+      ],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-020",
+    "category": "group-by",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "How many products are there in each color?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Color" }, { "table": "Product", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [ { "table": "Product", "column": "Color" } ],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-021",
+    "category": "group-by",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "What is the average list price for each product line?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "ProductLine" }, { "table": "Product", "column": "ListPrice", "aggregation": "AVG" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [ { "table": "Product", "column": "ProductLine" } ],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-022",
+    "category": "group-by",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "How many employees are there for each job title, sorted by job title?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Employee", "column": "JobTitle" }, { "table": "Employee", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Employee"],
+      "where": [],
+      "groupBy": [ { "table": "Employee", "column": "JobTitle" } ],
+      "orderBy": [ { "table": "Employee", "column": "JobTitle", "direction": "ASC" } ]
+    }
+  },
+  {
+    "id": "query-023",
+    "category": "order-distinct",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "List all product names in alphabetical order.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": [ { "table": "Product", "column": "Name", "direction": "ASC" } ]
+    }
+  },
+  {
+    "id": "query-024",
+    "category": "order-distinct",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the name and list price of products, most expensive first.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "Product", "column": "ListPrice" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": [ { "table": "Product", "column": "ListPrice", "direction": "DESC" } ]
+    }
+  },
+  {
+    "id": "query-025",
+    "category": "order-distinct",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "List each distinct job title.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": true, "columns": [ { "table": "Employee", "column": "JobTitle" } ] },
+      "from": ["Employee"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-026",
+    "category": "join-path",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show each product name with the name of its subcategory.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "ProductSubcategory", "column": "Name" } ] },
+      "from": ["Product", "ProductSubcategory"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-027",
+    "category": "join-path",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show each product name with the name of its category.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "ProductCategory", "column": "Name" } ] },
+      "from": ["Product", "ProductCategory"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    },
+    "notes": "Intermediate table: DB Diver should add ProductSubcategory. Verify the generated join path by hand once."
+  },
+  {
+    "id": "query-028",
+    "category": "join-path",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "What is the total quantity sold for each product name?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "SalesOrderDetail", "column": "OrderQty", "aggregation": "SUM" } ] },
+      "from": ["Product", "SalesOrderDetail"],
+      "where": [],
+      "groupBy": [ { "table": "Product", "column": "Name" } ],
+      "orderBy": []
+    },
+    "notes": "Judgement call: in AdventureWorks, SalesOrderDetail reaches Product through SpecialOfferProduct (composite FK), so the path has an intermediate table. Verify the join path by hand once."
+  },
+  {
+    "id": "query-029",
+    "category": "join-path",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the first name, last name, and job title of every employee.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Person", "column": "FirstName" }, { "table": "Person", "column": "LastName" }, { "table": "Employee", "column": "JobTitle" } ] },
+      "from": ["Person", "Employee"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-030",
+    "category": "join-path",
+    "split": "heldout",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "How many customers are there in each sales territory?",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "SalesTerritory", "column": "Name" }, { "table": "Customer", "column": "*", "aggregation": "COUNT" } ] },
+      "from": ["Customer", "SalesTerritory"],
+      "where": [],
+      "groupBy": [ { "table": "SalesTerritory", "column": "Name" } ],
+      "orderBy": []
+    }
+  },
+  {
+    "id": "query-031",
+    "category": "typo",
+    "split": "tune",
+    "expectedOutcome": "ok",
+    "schema": "sales",
+    "prompt": "Show the name and list price of every prodct.",
+    "expected": {
+      "version": 1,
+      "select": { "distinct": false, "columns": [ { "table": "Product", "column": "Name" }, { "table": "Product", "column": "ListPrice" } ] },
+      "from": ["Product"],
+      "where": [],
+      "groupBy": [],
+      "orderBy": []
+    },
+    "notes": "The LLM will probably fix the typo itself. To test the Levenshtein auto-correct, write a separate unit test that feeds the validator a canned response containing a misspelled identifier."
+  },
+  {
+    "id": "query-032",
+    "category": "reject",
+    "split": "heldout",
+    "expectedOutcome": "reject",
+    "schema": "sales",
+    "prompt": "Delete all sales orders placed before 2010.",
+    "expected": {
+      "version": 1,
+      "rejected": true,
+      "rejectionReason": "Only SELECT queries are supported."
+    },
+    "notes": "Not a SELECT. The model must reject this request and must not return a query."
+  },
+  {
+    "id": "query-033",
+    "category": "reject",
+    "split": "heldout",
+    "expectedOutcome": "reject",
+    "schema": "sales",
+    "prompt": "Show the top 5 most expensive products.",
+    "expected": null,
+    "notes": "Judgement call: TOP is deferred in the MVP contract. Decide whether this should be rejected, or answered with ORDER BY and no TOP."
+  }
+]

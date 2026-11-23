@@ -6,7 +6,7 @@
 DB Diver assists in navigating SQL Server database schemas and finding join paths. It displays the database schemas in an interactive graph UI that allows for seeing nearby tables, assists in finding join paths with two clicks, and builds out the joins needed to run any queries.
 
 **Initial Schema View:** 
-![DB Diver Graph View](DBDiver/Assets/UI_Screenshot.png)
+![DB Diver Graph View](/Assets/UI_Screenshot.png)
 
 **Query Building View:**
 ![DB Diver Graph View](DBDiver/Assets/Query_Builder_Screenshot.png)
@@ -18,36 +18,66 @@ DB Diver assists in navigating SQL Server database schemas and finding join path
 - **Custom Join Paths:** Allows for creating custom join paths if the schema does not have it. 
 - **Join Path Search:** Allows for automated join path finding by selecting one table and searching for another.
 - **Multiple Join Types:** Supports all join types, change by left-clicking on the path to cycle through them.
-- **Cross-Platform Support:** Built with Avalonia, DB Diver should work with all operating systems (currently, only tested on Linux)
+- **Cross-OS Support:** Built with Avalonia, DB Diver should work with all operating systems (currently, only tested on Linux)
+    - DB Mapping is currently only supported with SQL Server databases
 - **Customizable:** Don't like the color scheme or the graph physics? Simply change them within the settings menu.
 
 ## 🚀 Getting Started
 
-Download the application from the releases page and run! The application provides the query needed to build the ingested .csv schema file. There is a sample .csv file based on the Microsoft AdventureWorks database in /DBDiver/Assets/Sample_DB_Microsoft_AdventureWorks.csv
+Download the application from the releases page and run! The application provides the query needed to build the ingested .csv schema file. 
 
 ## 💻 Usage
 
-1. Run the .exe file and select "Copy Schema Query". Run against your database and save the result as a .csv file. 
+1. Launch DB Diver and select "Copy Schema Query". Run against your database and save the result as a .csv file. 
 2. Open the .csv file within DB Diver
 3. Controls
-    - Left Click on any table to see the nearby tables (as defined by joins). 
+    - **Left Click** on any table to see the nearby tables (as defined by joins). 
         - You can change the distance of nearby tables by changing the amount of "hops" you want to traverse. 
-    - Right Click on any table to see a context menu
+    - **Right Click** on any table to see a context menu
         - Add Custom Join Path: Left-click onto a table that you want to add a custom join path for, you will be presented with a modal that asks you for the column names on both sides of the join 
         - Build Query: This starts the query-building process. Left click on any tables you want to add to the join. If there are multiple paths to take from Table A -> B, you will be presented with a menu to select the option you would like the app to take. 
         - Finish Query: Finishes the query-building process and presents a `SELECT *` statement with the joins you added
         - Find a Table From Here: Opens a type-ahead search field with all the tables in the database and automatically finds the shortest path to the table. 
-4. Extras
+4. Natural Language processing. 
+   - Add your preferred Open AI-compatible LLM provider and build out queries that know your schema. 
+   - The LLM-generated query is validated against the loaded schema to ensure it is valid
+   - No queries are executed against your database; however, your database schema will be sent to the LLM via compact DDL
+     - The data inside your database is NEVER sent. 
+   - LLMs make mistakes, review the generated SQL before running
+   - Currently supported: 
+     - SELECT statements only 
+     - Aggregate Functions: COUNT(), SUM(), AVG(), MIN(), MAX()
+     - WHERE Clauses: `=`, `<`, `>`, `<=`, `>=`, `<>`, `LIKE`, `NOT LIKE`, `BETWEEN`, `IS NULL`, `IS NOT NULL`, 
+       - Nested WHERE ClAUSES
+     - TOP and DISTINCT keywords
+     - Data types: Numerics, Strings, LegacyText, Date, Time, DateTime, DateTimeOffset, Bit, Binary, RowVersion, Guid, HierarchyId
+     - INNER, LEFT, RIGHT, and FULL JOIN 
+     - GROUP BY and ORDER BY 
+   - The visualizer updates to highlight the join path created for the query
+   - **LLM Contract**
+     - DB Diver sends the compact schema DDL and a system prompt to an Open AI-compatible `/v1/chat/completions` endpoint.
+     - The model returns strict JSON using version `1` of the DB Diver query contract.
+     - The response is deserialized into a dedicated DTO, validated against the loaded schema, and then mapped into DB Diver's `QueryModel`.
+     - `from` only needs to include tables that supply referenced columns. DB Diver infers the complete join path and adds any intermediate tables.
+     - Non-SELECT requests must be rejected by setting `rejected: true` and providing a non-empty `rejectionReason`.
+     - `select.columns` supports qualified columns, `*`, `COUNT(*)`, optional aliases, and optional `DISTINCT`.
+     - `where` supports condition nodes and nested group nodes. Condition values are represented as arrays. The first node omits `operator`; following nodes use `AND` or `OR`.
+     - `groupBy` contains qualified columns.
+     - `orderBy` contains qualified columns, optional aggregation, and `ASC` or `DESC` direction.
+     - Unsupported SQL features are deferred for now: `TOP`, `HAVING`, `OFFSET-FETCH`, subqueries, and `UNION`.
+     - A valid response is displayed as generated SQL. Invalid responses are retried once with the validation errors, and the final raw response is preserved for review.
+5. Extras
     - Save custom schemas for later use. 
     - Customize all the colors used in the application and the attraction and repulsion physics of the graph UI. 
     - Viewport controls
         - Zoom in, fit-to-screen, zoom out, reset view. 
         - Change hop count to alter how many tables the UI will traverse to show nearby tables
+6. WHERE Clause Building 
+   - Build out WHERE Clauses using a drag-and-drop UI. 
+   - Supports grouping conditions and nested groups
 
 ## 🗺️ Feature Roadmap
-1. Add direct database connections
-2. WHERE Clause building
-3. UNION and subquery support 
+1. Natural Language processing via Open AI-compatible LLM connection.
 
 ## 📝 License 
 
